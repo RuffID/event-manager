@@ -20,21 +20,21 @@ http://localhost:5239/swagger
 
 ## API
 
-Базовый путь: `/api/events`.
+Базовый путь: `/events`.
 
 | Метод | Путь | Описание | Успешный ответ |
 |---|---|---|---|
-| `GET` | `/api/events` | Получить список событий | `200 OK` |
-| `GET` | `/api/events/{id}` | Получить событие по идентификатору | `200 OK` |
-| `POST` | `/api/events` | Создать событие | `201 Created` |
-| `PUT` | `/api/events/{id}` | Полностью обновить событие | `200 OK` |
-| `DELETE` | `/api/events/{id}` | Удалить событие | `204 No Content` |
+| `GET` | `/events` | Получить список событий | `200 OK` |
+| `GET` | `/events/{id}` | Получить событие по идентификатору | `200 OK` |
+| `POST` | `/events` | Создать событие | `201 Created` |
+| `PUT` | `/events/{id}` | Полностью обновить событие | `200 OK` |
+| `DELETE` | `/events/{id}` | Удалить событие | `204 No Content` |
 
 Если событие с указанным идентификатором не найдено, `GET`, `PUT` и `DELETE` вернут `404 Not Found`.
 
 ### Создание события
 
-`POST /api/events`
+`POST /events`
 
 ```json
 {
@@ -48,12 +48,12 @@ http://localhost:5239/swagger
 Успешный ответ содержит созданное событие и заголовок `Location` со ссылкой на него:
 
 ```text
-Location: /api/events/{id}
+Location: /events/{id}
 ```
 
 ### Обновление события
 
-`PUT /api/events/{id}`
+`PUT /events/{id}`
 
 Тело запроса имеет тот же формат, что и при создании события.
 

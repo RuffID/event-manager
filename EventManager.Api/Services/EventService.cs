@@ -37,6 +37,9 @@ namespace EventManager.Api.Services
         /// <inheritdoc />
         public ServiceResult<EventDto> CreateEvent(CreateEventDto dto)
         {
+            if (string.IsNullOrWhiteSpace(dto.Title))
+                return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "Event title must not be empty.");
+
             if (dto.StartAt is not DateTime startAt || dto.EndAt is not DateTime endAt)
                 return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "Start and end dates are required.");
 
@@ -54,6 +57,9 @@ namespace EventManager.Api.Services
         /// <inheritdoc />
         public ServiceResult<EventDto> UpdateEvent(Guid id, UpdateEventDto dto)
         {
+            if (string.IsNullOrWhiteSpace(dto.Title))
+                return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "Event title must not be empty.");
+
             if (dto.StartAt is not DateTime startAt || dto.EndAt is not DateTime endAt)
                 return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "Start and end dates are required.");
 

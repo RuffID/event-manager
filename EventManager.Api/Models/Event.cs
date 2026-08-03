@@ -38,7 +38,7 @@ namespace EventManager.Api.Models
                 throw new ArgumentException("The end date must be later than the start date.", nameof(endAt));
 
             Id = id;
-            Title = title;
+            Title = title.Trim();
             Description = description;
             StartAt = startAt;
             EndAt = endAt;

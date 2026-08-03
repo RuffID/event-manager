@@ -10,7 +10,7 @@ namespace EventManager.Api.Controllers
     /// Обрабатывает HTTP-запросы для работы с событиями.
     /// </summary>
     /// <param name="eventService">Сервис для работы с событиями.</param>
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     [ApiController]
     [Produces("application/json")]
     public class EventsController(IEventService eventService) : ControllerBase
