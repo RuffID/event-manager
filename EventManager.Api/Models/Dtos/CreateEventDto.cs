@@ -8,8 +8,7 @@ namespace EventManager.Api.Models.Dtos
     public class CreateEventDto
     {
         /// <summary>Получает или задаёт название создаваемого события.</summary>
-        [Required]
-        [StringLength(2000, MinimumLength = 2, ErrorMessage = "Title field must contain at least two characters.")]
+        [Required(ErrorMessage = "Specify the event title.")]
         public string Title { get; set; } = string.Empty;
 
         /// <summary>Получает или задаёт описание создаваемого события.</summary>

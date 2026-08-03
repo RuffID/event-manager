@@ -9,8 +9,8 @@ namespace EventManager.Api.Services
     public interface IEventService
     {
         /// <summary>Получает список всех событий.</summary>
-        /// <returns>Результат со списком DTO событий.</returns>
-        ServiceResult<List<EventDto>> GetEvents();
+        /// <returns>Список DTO событий.</returns>
+        List<EventDto> GetEvents();
 
         /// <summary>Получает событие по идентификатору.</summary>
         /// <param name="id">Идентификатор события.</param>
@@ -31,6 +31,6 @@ namespace EventManager.Api.Services
         /// <summary>Удаляет событие по идентификатору.</summary>
         /// <param name="id">Идентификатор удаляемого события.</param>
         /// <returns>Результат удаления или ошибкой, если событие не найдено.</returns>
-        ServiceResult<bool> DeleteEvent(Guid id);
+        ServiceResult DeleteEvent(Guid id);
     }
 }

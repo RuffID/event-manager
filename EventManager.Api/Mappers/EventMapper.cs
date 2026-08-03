@@ -28,14 +28,12 @@ namespace EventManager.Api.Mappers
         /// <returns>Новая сущность события.</returns>
         public static Event ToEvent(this CreateEventDto dto)
         {
-            return new Event
-            {
-                Id = Guid.NewGuid(),
-                Title = dto.Title,
-                Description = dto.Description,
-                StartAt = dto.StartAt!.Value,
-                EndAt = dto.EndAt!.Value
-            };
+            return new Event(
+                Guid.NewGuid(),
+                dto.Title,
+                dto.Description,
+                dto.StartAt!.Value,
+                dto.EndAt!.Value);
         }
 
         /// <summary>Создаёт сущность события из DTO запроса на обновление.</summary>
@@ -44,14 +42,12 @@ namespace EventManager.Api.Mappers
         /// <returns>Сущность события с обновлёнными данными.</returns>
         public static Event ToEvent(this UpdateEventDto dto, Guid id)
         {
-            return new Event
-            {
-                Id = id,
-                Title = dto.Title,
-                Description = dto.Description,
-                StartAt = dto.StartAt!.Value,
-                EndAt = dto.EndAt!.Value
-            };
+            return new Event(
+                id,
+                dto.Title,
+                dto.Description,
+                dto.StartAt!.Value,
+                dto.EndAt!.Value);
         }
     }
 }

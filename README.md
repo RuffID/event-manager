@@ -13,10 +13,10 @@ dotnet run --project .\EventManager.Api\EventManager.Api.csproj
 После запуска Swagger UI будет доступен по адресу:
 
 ```text
-https://localhost:<порт>/swagger
+http://localhost:5239/swagger
 ```
 
-Номер порта отображается в консоли при запуске приложения.
+Если порт переопределён в настройках запуска, его актуальное значение отображается в консоли приложения.
 
 ## API
 
@@ -45,6 +45,12 @@ https://localhost:<порт>/swagger
 }
 ```
 
+Успешный ответ содержит созданное событие и заголовок `Location` со ссылкой на него:
+
+```text
+Location: /api/events/{id}
+```
+
 ### Обновление события
 
 `PUT /api/events/{id}`
@@ -54,7 +60,15 @@ https://localhost:<порт>/swagger
 ## Валидация
 
 - `title`, `startAt` и `endAt` обязательны;
-- название должно содержать от 2 до 2000 символов;
+- `title` не может быть пустым или состоять только из пробелов;
 - дата окончания должна быть позже даты начала.
 
-При невалидных данных API возвращает `400 Bad Request`.
+При невалидных данных API возвращает `400 Bad Request`. Если событие не найдено, API возвращает `404 Not Found`. Ошибки сервисного слоя представлены в формате `ProblemDetails`:
+
+```json
+{
+  "title": "Request processing failed",
+  "status": 404,
+  "detail": "Event not found."
+}
+```

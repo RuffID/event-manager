@@ -18,11 +18,11 @@ namespace EventManager.Api.Services
             if (eventRepository.Events.TryGetValue(id, out Event? @event))
                 return ServiceResult<EventDto>.Succeed(@event.ToDto());
 
-            return ServiceResult<EventDto>.Fail(404, "Event not found.");
+            return ServiceResult<EventDto>.Fail(ServiceErrorType.NotFound, "Event not found.");
         }
 
         /// <inheritdoc />
-        public ServiceResult<List<EventDto>> GetEvents()
+        public List<EventDto> GetEvents()
         {
             List<EventDto> events = [];
 
@@ -31,34 +31,34 @@ namespace EventManager.Api.Services
                 events.Add(@event.ToDto());
             }
 
-            return ServiceResult<List<EventDto>>.Succeed(events);
+            return events;
         }
 
         /// <inheritdoc />
         public ServiceResult<EventDto> CreateEvent(CreateEventDto dto)
         {
             if (dto.StartAt is not DateTime startAt || dto.EndAt is not DateTime endAt)
-                return ServiceResult<EventDto>.Fail(400, "Start and end dates are required.");
+                return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "Start and end dates are required.");
 
             if (endAt <= startAt)
-                return ServiceResult<EventDto>.Fail(400, "The end date must be later than the start date.");
+                return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "The end date must be later than the start date.");
 
             Event @event = dto.ToEvent();
             
             if (eventRepository.Events.TryAdd(@event.Id, @event))
-                return ServiceResult<EventDto>.Succeed(@event.ToDto(), 201);
+                return ServiceResult<EventDto>.Succeed(@event.ToDto());
 
-            return ServiceResult<EventDto>.Fail(500, "Failed to create event.");
+            return ServiceResult<EventDto>.Fail(ServiceErrorType.Internal, "Failed to create event.");
         }
 
         /// <inheritdoc />
         public ServiceResult<EventDto> UpdateEvent(Guid id, UpdateEventDto dto)
         {
             if (dto.StartAt is not DateTime startAt || dto.EndAt is not DateTime endAt)
-                return ServiceResult<EventDto>.Fail(400, "Start and end dates are required.");
+                return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "Start and end dates are required.");
 
             if (endAt <= startAt)
-                return ServiceResult<EventDto>.Fail(400, "The end date must be later than the start date.");
+                return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "The end date must be later than the start date.");
 
             if (eventRepository.Events.TryGetValue(id, out Event? @event))
             {
@@ -69,19 +69,19 @@ namespace EventManager.Api.Services
                     return ServiceResult<EventDto>.Succeed(updatedEvent.ToDto());
                 }
                 
-                return ServiceResult<EventDto>.Fail(404, "Event not found.");
+                return ServiceResult<EventDto>.Fail(ServiceErrorType.NotFound, "Event not found.");
             }
 
-            return ServiceResult<EventDto>.Fail(404, "Event not found.");            
+            return ServiceResult<EventDto>.Fail(ServiceErrorType.NotFound, "Event not found.");            
         }
 
         /// <inheritdoc />
-        public ServiceResult<bool> DeleteEvent(Guid id)
+        public ServiceResult DeleteEvent(Guid id)
         {
-            if (eventRepository.Events.TryRemove(id, out Event? @event))
-                return ServiceResult<bool>.Succeed(true, 204);
+            if (eventRepository.Events.TryRemove(id, out _))
+                return ServiceResult.Succeed();
 
-            return ServiceResult<bool>.Fail(404, "Event not found.");            
+            return ServiceResult.Fail(ServiceErrorType.NotFound, "Event not found.");            
         }
     }
 }

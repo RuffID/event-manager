@@ -2,6 +2,7 @@ using EventManager.Api.Models.Dtos;
 using EventManager.Api.Models.Results;
 using EventManager.Api.Services;
 using Microsoft.AspNetCore.Mvc;
+using EventManager.Api.Extensions;
 
 namespace EventManager.Api.Controllers
 {
@@ -22,12 +23,8 @@ namespace EventManager.Api.Controllers
         [ProducesResponseType(typeof(List<EventDto>), StatusCodes.Status200OK)]
         public IActionResult GetEvents()
         {
-            ServiceResult<List<EventDto>> result = eventService.GetEvents();
-            
-            if (!result.Success)
-                return StatusCode(result.StatusCode, result.Error);
-
-            return StatusCode(result.StatusCode, result.Data);
+            List<EventDto> events = eventService.GetEvents();
+            return Ok(events);
         }
 
         /// <summary>
@@ -38,15 +35,15 @@ namespace EventManager.Api.Controllers
         /// <response code="404">Событие с указанным идентификатором не найдено.</response>
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(EventDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ServiceError), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public IActionResult GetEvent(Guid id)
         {
             ServiceResult<EventDto> result = eventService.GetEventById(id);
 
             if (!result.Success)
-                return StatusCode(result.StatusCode, result.Error);
+                return this.ToProblemResult(result.Error);
 
-            return StatusCode(result.StatusCode, result.Data);
+            return Ok(result.Data);
         }
 
         /// <summary>
@@ -59,16 +56,19 @@ namespace EventManager.Api.Controllers
         [HttpPost]
         [Consumes("application/json")]
         [ProducesResponseType(typeof(EventDto), StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(ServiceError), StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public IActionResult CreateEvent([FromBody] CreateEventDto dto)
         {
             ServiceResult<EventDto> result = eventService.CreateEvent(dto);
 
             if (!result.Success)
-                return StatusCode(result.StatusCode, result.Error);
+                return this.ToProblemResult(result.Error);
 
-            return StatusCode(result.StatusCode, result.Data);
+            EventDto createdEvent = result.Data
+                ?? throw new InvalidOperationException("A successful result must contain event data.");
+
+            return CreatedAtAction(nameof(GetEvent), new { id = createdEvent.Id }, createdEvent);
         }
 
         /// <summary>
@@ -82,16 +82,16 @@ namespace EventManager.Api.Controllers
         [HttpPut("{id}")]
         [Consumes("application/json")]
         [ProducesResponseType(typeof(EventDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(ServiceError), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public IActionResult UpdateEvent(Guid id, [FromBody] UpdateEventDto dto)
         {
             ServiceResult<EventDto> result = eventService.UpdateEvent(id, dto);
 
             if (!result.Success)
-                return StatusCode(result.StatusCode, result.Error);
+                return this.ToProblemResult(result.Error);
 
-            return StatusCode(result.StatusCode, result.Data);
+            return Ok(result.Data);
         }
 
         /// <summary>
@@ -102,13 +102,13 @@ namespace EventManager.Api.Controllers
         /// <response code="404">Событие с указанным идентификатором не найдено.</response>
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(typeof(ServiceError), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public IActionResult DeleteEvent(Guid id)
         {
-            ServiceResult<bool> result = eventService.DeleteEvent(id);
+            ServiceResult result = eventService.DeleteEvent(id);
 
             if (!result.Success)
-                return StatusCode(result.StatusCode, result.Error);
+                return this.ToProblemResult(result.Error);
 
             return NoContent();
         }
