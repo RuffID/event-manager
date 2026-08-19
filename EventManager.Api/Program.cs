@@ -4,6 +4,15 @@ using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
+if (builder.Environment.IsDevelopment())
+{
+    builder.Host.UseDefaultServiceProvider(options =>
+    {
+        options.ValidateScopes = true;
+        options.ValidateOnBuild = true;
+    });
+}
+
 builder.Services.AddControllers();
 
 // Регистрирует Swagger и подключает XML-документацию API.

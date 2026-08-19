@@ -249,6 +249,41 @@ namespace EventManager.Api.Tests.Services
         }
 
         [Fact]
+        public void GetEvents_ReturnsAllEvents_WhenTitleFilterContainsOnlyWhitespace()
+        {
+            Event firstEvent = CreateStoredEvent(
+                "Первая встреча",
+                new DateTime(2027, 2, 1, 10, 0, 0),
+                new DateTime(2027, 2, 1, 12, 0, 0));
+
+            Event secondEvent = CreateStoredEvent(
+                "Вторая встреча",
+                new DateTime(2027, 2, 2, 10, 0, 0),
+                new DateTime(2027, 2, 2, 12, 0, 0));
+
+            EventService service = new EventService(CreateRepository(firstEvent, secondEvent));
+
+            PaginatedResult result = service.GetEvents(title: "   ");
+
+            Assert.Equal(2, result.TotalCount);
+            Assert.Equal(2, result.Events.Count);
+        }
+
+        [Fact]
+        public void GetEvents_IncludesEventsOnDateFilterBoundaries()
+        {
+            DateTime from = new DateTime(2027, 2, 10, 10, 0, 0);
+            DateTime to = new DateTime(2027, 2, 10, 12, 0, 0);
+            Event boundaryEvent = CreateStoredEvent("Граничная встреча", from, to);
+            EventService service = new EventService(CreateRepository(boundaryEvent));
+
+            PaginatedResult result = service.GetEvents(from: from, to: to);
+
+            EventDto foundEvent = Assert.Single(result.Events);
+            Assert.Equal(boundaryEvent.Id, foundEvent.Id);
+        }
+
+        [Fact]
         public void GetEventById_ReturnsNotFoundError_WhenEventDoesNotExist()
         {
             EventService service = new EventService(CreateRepository());
@@ -272,6 +307,18 @@ namespace EventManager.Api.Tests.Services
             };
 
             ServiceResult<EventDto> result = service.UpdateEvent(Guid.NewGuid(), dto);
+
+            Assert.False(result.Success);
+            ServiceError error = Assert.IsType<ServiceError>(result.Error);
+            Assert.Equal(ServiceErrorType.NotFound, error.Type);
+        }
+
+        [Fact]
+        public void DeleteEvent_ReturnsNotFoundError_WhenEventDoesNotExist()
+        {
+            EventService service = new EventService(CreateRepository());
+
+            ServiceResult result = service.DeleteEvent(Guid.NewGuid());
 
             Assert.False(result.Success);
             ServiceError error = Assert.IsType<ServiceError>(result.Error);
