@@ -1,7 +1,17 @@
 using EventManager.Api.Extensions;
+using EventManager.Api.Middlewares;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
+
+if (builder.Environment.IsDevelopment())
+{
+    builder.Host.UseDefaultServiceProvider(options =>
+    {
+        options.ValidateScopes = true;
+        options.ValidateOnBuild = true;
+    });
+}
 
 builder.Services.AddControllers();
 
@@ -18,6 +28,8 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddServices();
 
 var app = builder.Build();
+
+app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseSwagger();
 app.UseSwaggerUI();

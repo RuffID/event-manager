@@ -3,6 +3,7 @@ using EventManager.Api.Models.Results;
 using EventManager.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using EventManager.Api.Extensions;
+using System.ComponentModel.DataAnnotations;
 
 namespace EventManager.Api.Controllers
 {
@@ -16,15 +17,25 @@ namespace EventManager.Api.Controllers
     public class EventsController(IEventService eventService) : ControllerBase
     {
         /// <summary>
-        /// Возвращает список всех событий.
+        /// Возвращает список событий с учётом заданных фильтров.
         /// </summary>
+        /// <param name="title">Часть названия события.</param>
+        /// <param name="from">Минимальная дата и время начала события.</param>
+        /// <param name="to">Максимальная дата и время окончания события.</param>
+        /// <param name="page">Номер возвращаемой страницы.</param>
+        /// <param name="pageSize">Количество событий на странице.</param>
         /// <response code="200">Возвращает список событий.</response>
         [HttpGet]
-        [ProducesResponseType(typeof(List<EventDto>), StatusCodes.Status200OK)]
-        public IActionResult GetEvents()
+        [ProducesResponseType(typeof(PaginatedResult), StatusCodes.Status200OK)]
+        public IActionResult GetEvents(
+            [FromQuery] string? title = null,
+            [FromQuery] DateTime? from = null,
+            [FromQuery] DateTime? to = null,
+            [FromQuery, Range(1, int.MaxValue)] int page = 1,
+            [FromQuery, Range(1, int.MaxValue)] int pageSize = 10)
         {
-            List<EventDto> events = eventService.GetEvents();
-            return Ok(events);
+            PaginatedResult result = eventService.GetEvents(title, from, to, page, pageSize);
+            return Ok(result);
         }
 
         /// <summary>
@@ -39,11 +50,7 @@ namespace EventManager.Api.Controllers
         public IActionResult GetEvent(Guid id)
         {
             ServiceResult<EventDto> result = eventService.GetEventById(id);
-
-            if (!result.Success)
-                return this.ToProblemResult(result.Error);
-
-            return Ok(result.Data);
+            return this.ToActionResult(result, data => Ok(data));
         }
 
         /// <summary>
@@ -61,14 +68,12 @@ namespace EventManager.Api.Controllers
         public IActionResult CreateEvent([FromBody] CreateEventDto dto)
         {
             ServiceResult<EventDto> result = eventService.CreateEvent(dto);
-
-            if (!result.Success)
-                return this.ToProblemResult(result.Error);
-
-            EventDto createdEvent = result.Data
-                ?? throw new InvalidOperationException("A successful result must contain event data.");
-
-            return CreatedAtAction(nameof(GetEvent), new { id = createdEvent.Id }, createdEvent);
+            return this.ToActionResult(
+                result,
+                createdEvent => CreatedAtAction(
+                    nameof(GetEvent),
+                    new { id = createdEvent.Id },
+                    createdEvent));
         }
 
         /// <summary>
@@ -87,11 +92,7 @@ namespace EventManager.Api.Controllers
         public IActionResult UpdateEvent(Guid id, [FromBody] UpdateEventDto dto)
         {
             ServiceResult<EventDto> result = eventService.UpdateEvent(id, dto);
-
-            if (!result.Success)
-                return this.ToProblemResult(result.Error);
-
-            return Ok(result.Data);
+            return this.ToActionResult(result, data => Ok(data));
         }
 
         /// <summary>
@@ -106,11 +107,7 @@ namespace EventManager.Api.Controllers
         public IActionResult DeleteEvent(Guid id)
         {
             ServiceResult result = eventService.DeleteEvent(id);
-
-            if (!result.Success)
-                return this.ToProblemResult(result.Error);
-
-            return NoContent();
+            return this.ToActionResult(result, NoContent);
         }
     }
 }
