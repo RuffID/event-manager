@@ -22,8 +22,16 @@ namespace EventManager.Api.Services
         }
 
         /// <inheritdoc />
-        public List<EventDto> GetEvents(string? title = null, DateTime? from = null, DateTime? to = null)
+        public PaginatedResult GetEvents(
+            string? title = null,
+            DateTime? from = null,
+            DateTime? to = null,
+            int page = 1,
+            int pageSize = 10)
         {
+            ArgumentOutOfRangeException.ThrowIfLessThan(page, 1);
+            ArgumentOutOfRangeException.ThrowIfLessThan(pageSize, 1);
+
             IEnumerable<Event> events = eventRepository.Events.Values;
 
             if (!string.IsNullOrWhiteSpace(title))
@@ -39,7 +47,24 @@ namespace EventManager.Api.Services
             if (to is not null)
                 events = events.Where(@event => @event.EndAt <= to.Value);
 
-            return events.Select(@event => @event.ToDto()).ToList();
+            int totalCount = events.Count();
+            int offset = (page - 1) * pageSize;
+
+            List<EventDto> pageEvents = events
+                .OrderBy(@event => @event.StartAt)
+                .ThenBy(@event => @event.Id)
+                .Skip(offset)
+                .Take(pageSize)
+                .Select(@event => @event.ToDto())
+                .ToList();
+
+            return new PaginatedResult
+            {
+                TotalCount = totalCount,
+                Events = pageEvents,
+                Page = page,
+                PageSize = pageSize
+            };
         }
 
         /// <inheritdoc />

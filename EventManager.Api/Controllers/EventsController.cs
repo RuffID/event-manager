@@ -3,6 +3,7 @@ using EventManager.Api.Models.Results;
 using EventManager.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using EventManager.Api.Extensions;
+using System.ComponentModel.DataAnnotations;
 
 namespace EventManager.Api.Controllers
 {
@@ -21,16 +22,20 @@ namespace EventManager.Api.Controllers
         /// <param name="title">Часть названия события.</param>
         /// <param name="from">Минимальная дата и время начала события.</param>
         /// <param name="to">Максимальная дата и время окончания события.</param>
+        /// <param name="page">Номер возвращаемой страницы.</param>
+        /// <param name="pageSize">Количество событий на странице.</param>
         /// <response code="200">Возвращает список событий.</response>
         [HttpGet]
-        [ProducesResponseType(typeof(List<EventDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(PaginatedResult), StatusCodes.Status200OK)]
         public IActionResult GetEvents(
             [FromQuery] string? title = null,
             [FromQuery] DateTime? from = null,
-            [FromQuery] DateTime? to = null)
+            [FromQuery] DateTime? to = null,
+            [FromQuery, Range(1, int.MaxValue)] int page = 1,
+            [FromQuery, Range(1, int.MaxValue)] int pageSize = 10)
         {
-            List<EventDto> events = eventService.GetEvents(title, from, to);
-            return Ok(events);
+            PaginatedResult result = eventService.GetEvents(title, from, to, page, pageSize);
+            return Ok(result);
         }
 
         /// <summary>

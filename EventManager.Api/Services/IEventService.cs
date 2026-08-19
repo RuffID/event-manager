@@ -12,8 +12,15 @@ namespace EventManager.Api.Services
         /// <param name="title">Часть названия события.</param>
         /// <param name="from">Минимальная дата и время начала события.</param>
         /// <param name="to">Максимальная дата и время окончания события.</param>
-        /// <returns>Список DTO событий.</returns>
-        List<EventDto> GetEvents(string? title = null, DateTime? from = null, DateTime? to = null);
+        /// <param name="page">Номер возвращаемой страницы.</param>
+        /// <param name="pageSize">Количество событий на странице.</param>
+        /// <returns>Страница событий и сведения о пагинации.</returns>
+        PaginatedResult GetEvents(
+            string? title = null,
+            DateTime? from = null,
+            DateTime? to = null,
+            int page = 1,
+            int pageSize = 10);
 
         /// <summary>Получает событие по идентификатору.</summary>
         /// <param name="id">Идентификатор события.</param>
