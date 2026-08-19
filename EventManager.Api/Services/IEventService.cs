@@ -8,9 +8,12 @@ namespace EventManager.Api.Services
     /// </summary>
     public interface IEventService
     {
-        /// <summary>Получает список всех событий.</summary>
+        /// <summary>Получает список событий с учётом заданных фильтров.</summary>
+        /// <param name="title">Часть названия события.</param>
+        /// <param name="from">Минимальная дата и время начала события.</param>
+        /// <param name="to">Максимальная дата и время окончания события.</param>
         /// <returns>Список DTO событий.</returns>
-        List<EventDto> GetEvents();
+        List<EventDto> GetEvents(string? title = null, DateTime? from = null, DateTime? to = null);
 
         /// <summary>Получает событие по идентификатору.</summary>
         /// <param name="id">Идентификатор события.</param>

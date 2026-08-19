@@ -16,14 +16,20 @@ namespace EventManager.Api.Controllers
     public class EventsController(IEventService eventService) : ControllerBase
     {
         /// <summary>
-        /// Возвращает список всех событий.
+        /// Возвращает список событий с учётом заданных фильтров.
         /// </summary>
+        /// <param name="title">Часть названия события.</param>
+        /// <param name="from">Минимальная дата и время начала события.</param>
+        /// <param name="to">Максимальная дата и время окончания события.</param>
         /// <response code="200">Возвращает список событий.</response>
         [HttpGet]
         [ProducesResponseType(typeof(List<EventDto>), StatusCodes.Status200OK)]
-        public IActionResult GetEvents()
+        public IActionResult GetEvents(
+            [FromQuery] string? title = null,
+            [FromQuery] DateTime? from = null,
+            [FromQuery] DateTime? to = null)
         {
-            List<EventDto> events = eventService.GetEvents();
+            List<EventDto> events = eventService.GetEvents(title, from, to);
             return Ok(events);
         }
 

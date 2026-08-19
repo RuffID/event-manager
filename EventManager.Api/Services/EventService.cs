@@ -22,16 +22,24 @@ namespace EventManager.Api.Services
         }
 
         /// <inheritdoc />
-        public List<EventDto> GetEvents()
+        public List<EventDto> GetEvents(string? title = null, DateTime? from = null, DateTime? to = null)
         {
-            List<EventDto> events = [];
+            IEnumerable<Event> events = eventRepository.Events.Values;
 
-            foreach (Event @event in eventRepository.Events.Values)
+            if (!string.IsNullOrWhiteSpace(title))
             {
-                events.Add(@event.ToDto());
+                string normalizedTitle = title.Trim().ToUpperInvariant();
+                events = events.Where(@event =>
+                    @event.Title.ToUpperInvariant().Contains(normalizedTitle));
             }
 
-            return events;
+            if (from is not null)
+                events = events.Where(@event => @event.StartAt >= from.Value);
+
+            if (to is not null)
+                events = events.Where(@event => @event.EndAt <= to.Value);
+
+            return events.Select(@event => @event.ToDto()).ToList();
         }
 
         /// <inheritdoc />
