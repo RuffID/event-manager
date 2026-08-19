@@ -50,11 +50,7 @@ namespace EventManager.Api.Controllers
         public IActionResult GetEvent(Guid id)
         {
             ServiceResult<EventDto> result = eventService.GetEventById(id);
-
-            if (!result.Success)
-                return this.ToProblemResult(result.Error);
-
-            return Ok(result.Data);
+            return this.ToActionResult(result, data => Ok(data));
         }
 
         /// <summary>
@@ -72,14 +68,12 @@ namespace EventManager.Api.Controllers
         public IActionResult CreateEvent([FromBody] CreateEventDto dto)
         {
             ServiceResult<EventDto> result = eventService.CreateEvent(dto);
-
-            if (!result.Success)
-                return this.ToProblemResult(result.Error);
-
-            EventDto createdEvent = result.Data
-                ?? throw new InvalidOperationException("A successful result must contain event data.");
-
-            return CreatedAtAction(nameof(GetEvent), new { id = createdEvent.Id }, createdEvent);
+            return this.ToActionResult(
+                result,
+                createdEvent => CreatedAtAction(
+                    nameof(GetEvent),
+                    new { id = createdEvent.Id },
+                    createdEvent));
         }
 
         /// <summary>
@@ -98,11 +92,7 @@ namespace EventManager.Api.Controllers
         public IActionResult UpdateEvent(Guid id, [FromBody] UpdateEventDto dto)
         {
             ServiceResult<EventDto> result = eventService.UpdateEvent(id, dto);
-
-            if (!result.Success)
-                return this.ToProblemResult(result.Error);
-
-            return Ok(result.Data);
+            return this.ToActionResult(result, data => Ok(data));
         }
 
         /// <summary>
@@ -117,11 +107,7 @@ namespace EventManager.Api.Controllers
         public IActionResult DeleteEvent(Guid id)
         {
             ServiceResult result = eventService.DeleteEvent(id);
-
-            if (!result.Success)
-                return this.ToProblemResult(result.Error);
-
-            return NoContent();
+            return this.ToActionResult(result, NoContent);
         }
     }
 }

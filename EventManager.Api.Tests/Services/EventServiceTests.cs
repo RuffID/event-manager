@@ -210,6 +210,24 @@ namespace EventManager.Api.Tests.Services
             Assert.Equal(expectedIds, result.Events.Select(item => item.Id));
         }
 
+        [Theory]
+        [InlineData(0, 10, "page")]
+        [InlineData(-1, 10, "page")]
+        [InlineData(1, 0, "pageSize")]
+        [InlineData(1, -1, "pageSize")]
+        public void GetEvents_ThrowsArgumentOutOfRangeException_WhenPaginationIsInvalid(
+            int page,
+            int pageSize,
+            string parameterName)
+        {
+            EventService service = new EventService(CreateRepository());
+
+            ArgumentOutOfRangeException exception = Assert.Throws<ArgumentOutOfRangeException>(
+                () => service.GetEvents(page: page, pageSize: pageSize));
+
+            Assert.Equal(parameterName, exception.ParamName);
+        }
+
         [Fact]
         public void GetEvents_ReturnsMatchingEvents_WhenFiltersAreCombined()
         {
