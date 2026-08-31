@@ -27,6 +27,7 @@ namespace EventManager.Api.Models.Results
         /// <returns>Успешный результат операции с данными.</returns>
         public static ServiceResult<T> Succeed(T data)
         {
+            ArgumentNullException.ThrowIfNull(data);
             return new ServiceResult<T>(true, data, null);
         }
 
