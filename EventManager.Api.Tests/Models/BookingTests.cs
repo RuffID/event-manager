@@ -91,5 +91,49 @@ namespace EventManager.Api.Tests.Models
             Assert.Equal(BookingStatus.Rejected, booking.Status);
             Assert.Equal(processedAt, booking.ProcessedAt);
         }
+
+        [Fact]
+        public void Confirm_ThrowsInvalidOperationException_WhenBookingIsAlreadyConfirmed()
+        {
+            Booking booking = new Booking(Guid.NewGuid());
+            booking.Confirm();
+            DateTime? processedAt = booking.ProcessedAt;
+
+            Action action = booking.Confirm;
+
+            Assert.Throws<InvalidOperationException>(action);
+            Assert.Equal(BookingStatus.Confirmed, booking.Status);
+            Assert.Equal(processedAt, booking.ProcessedAt);
+        }
+
+        [Fact]
+        public void Reject_ThrowsInvalidOperationException_WhenBookingIsAlreadyRejected()
+        {
+            Booking booking = new Booking(Guid.NewGuid());
+            booking.Reject();
+            DateTime? processedAt = booking.ProcessedAt;
+
+            Action action = booking.Reject;
+
+            Assert.Throws<InvalidOperationException>(action);
+            Assert.Equal(BookingStatus.Rejected, booking.Status);
+            Assert.Equal(processedAt, booking.ProcessedAt);
+        }
+
+        [Fact]
+        public async Task ConfirmAndReject_AllowOnlyOneTransition_WhenCalledConcurrently()
+        {
+            Booking booking = new Booking(Guid.NewGuid());
+
+            Task<Exception?> confirmTask = Task.Run(() => Record.Exception(booking.Confirm));
+            Task<Exception?> rejectTask = Task.Run(() => Record.Exception(booking.Reject));
+
+            Exception?[] exceptions = await Task.WhenAll(confirmTask, rejectTask);
+            Assert.Equal(1, exceptions.Count(exception => exception is null));
+            Assert.Equal(1, exceptions.Count(exception => exception is InvalidOperationException));
+            Assert.True(
+                booking.Status is BookingStatus.Confirmed or BookingStatus.Rejected);
+            Assert.NotNull(booking.ProcessedAt);
+        }
     }
 }

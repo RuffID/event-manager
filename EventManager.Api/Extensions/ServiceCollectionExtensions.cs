@@ -18,6 +18,8 @@ namespace EventManager.Api.Extensions
             services.AddScoped<IBookingService, BookingService>();
             services.AddSingleton<InMemoryEventRepository>();
             services.AddSingleton<InMemoryBookingRepository>();
+            services.AddSingleton<IBookingProcessingDelay, BookingProcessingDelay>();
+            services.AddSingleton<BookingProcessor>();
             services.AddHostedService<BookingProcessingService>();
 
             return services;

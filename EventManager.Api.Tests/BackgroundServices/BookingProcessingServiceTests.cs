@@ -10,8 +10,13 @@ namespace EventManager.Api.Tests.BackgroundServices
         [Fact]
         public async Task StopAsync_CompletesExecution_WhenServiceIsCancelled()
         {
+            InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
+            BookingProcessor bookingProcessor = new BookingProcessor(
+                bookingRepository,
+                new ImmediateBookingProcessingDelay(),
+                NullLogger<BookingProcessor>.Instance);
             using BookingProcessingService service = new BookingProcessingService(
-                new InMemoryBookingRepository(),
+                bookingProcessor,
                 NullLogger<BookingProcessingService>.Instance);
 
             await service.StartAsync(CancellationToken.None);
@@ -20,6 +25,15 @@ namespace EventManager.Api.Tests.BackgroundServices
             Task? executeTask = service.ExecuteTask;
             Assert.NotNull(executeTask);
             Assert.True(executeTask.IsCompletedSuccessfully);
+        }
+
+        private class ImmediateBookingProcessingDelay : IBookingProcessingDelay
+        {
+            public Task WaitAsync(CancellationToken cancellationToken)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                return Task.CompletedTask;
+            }
         }
     }
 }

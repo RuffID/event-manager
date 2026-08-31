@@ -13,13 +13,15 @@ namespace EventManager.Api.Mappers
         /// <returns>DTO с данными брони.</returns>
         public static BookingInfo ToInfo(this Booking booking)
         {
+            (BookingStatus status, DateTime? processedAt) = booking.GetProcessingState();
+
             return new BookingInfo
             {
                 Id = booking.Id,
                 EventId = booking.EventId,
-                Status = booking.Status,
+                Status = status,
                 CreatedAt = booking.CreatedAt,
-                ProcessedAt = booking.ProcessedAt
+                ProcessedAt = processedAt
             };
         }
     }
