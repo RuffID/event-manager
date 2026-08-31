@@ -1,3 +1,4 @@
+using EventManager.Api.BackgroundServices;
 using EventManager.Api.Repositories;
 using EventManager.Api.Services;
 
@@ -17,6 +18,7 @@ namespace EventManager.Api.Extensions
             services.AddScoped<IBookingService, BookingService>();
             services.AddSingleton<InMemoryEventRepository>();
             services.AddSingleton<InMemoryBookingRepository>();
+            services.AddHostedService<BookingProcessingService>();
 
             return services;
         }

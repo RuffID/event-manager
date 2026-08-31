@@ -34,5 +34,26 @@ namespace EventManager.Api.Models
             Status = BookingStatus.Pending;
             CreatedAt = DateTime.UtcNow;
         }
+
+        /// <summary>Подтверждает бронь и фиксирует время обработки.</summary>
+        public void Confirm()
+        {
+            Complete(BookingStatus.Confirmed);
+        }
+
+        /// <summary>Отклоняет бронь и фиксирует время обработки.</summary>
+        public void Reject()
+        {
+            Complete(BookingStatus.Rejected);
+        }
+
+        private void Complete(BookingStatus status)
+        {
+            if (Status != BookingStatus.Pending)
+                throw new InvalidOperationException("Only a pending booking can be processed.");
+
+            ProcessedAt = DateTime.UtcNow;
+            Status = status;
+        }
     }
 }
