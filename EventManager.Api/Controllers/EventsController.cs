@@ -11,10 +11,13 @@ namespace EventManager.Api.Controllers
     /// Обрабатывает HTTP-запросы для работы с событиями.
     /// </summary>
     /// <param name="eventService">Сервис для работы с событиями.</param>
+    /// <param name="bookingService">Сервис для работы с бронированиями.</param>
     [Route("[controller]")]
     [ApiController]
     [Produces("application/json")]
-    public class EventsController(IEventService eventService) : ControllerBase
+    public class EventsController(
+        IEventService eventService,
+        IBookingService bookingService) : ControllerBase
     {
         /// <summary>
         /// Возвращает список событий с учётом заданных фильтров.
@@ -74,6 +77,30 @@ namespace EventManager.Api.Controllers
                     nameof(GetEvent),
                     new { id = createdEvent.Id },
                     createdEvent));
+        }
+
+        /// <summary>
+        /// Создаёт бронь для указанного события.
+        /// </summary>
+        /// <param name="id">Идентификатор события.</param>
+        /// <response code="202">Бронь создана и ожидает обработки.</response>
+        /// <response code="404">Событие с указанным идентификатором не найдено.</response>
+        /// <response code="500">Не удалось сохранить бронь.</response>
+        [HttpPost("{id}/book")]
+        [ProducesResponseType(typeof(BookingInfo), StatusCodes.Status202Accepted)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> CreateBooking(Guid id)
+        {
+            ServiceResult<BookingInfo> result = await bookingService.CreateBookingAsync(id);
+
+            return this.ToActionResult(
+                result,
+                booking => AcceptedAtAction(
+                    nameof(BookingsController.GetBooking),
+                    "Bookings",
+                    new { id = booking.Id },
+                    booking));
         }
 
         /// <summary>
