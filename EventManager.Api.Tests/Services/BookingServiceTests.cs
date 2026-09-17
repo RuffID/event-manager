@@ -33,22 +33,28 @@ namespace EventManager.Api.Tests.Services
         }
 
         [Fact]
-        public async Task CreateBookingAsync_CreatesUniqueBookings_WhenCalledForSameEvent()
+        public async Task CreateBookingAsync_CreatesUniqueBookings_WhenCalledUntilSeatLimit()
         {
-            Event existingEvent = CreateEvent();
+            const int totalSeats = 3;
+            Event existingEvent = CreateEvent(totalSeats);
             InMemoryEventRepository eventRepository = CreateEventRepository(existingEvent);
             InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
             BookingService service = new BookingService(eventRepository, bookingRepository);
+            List<BookingInfo> bookings = new List<BookingInfo>();
 
-            ServiceResult<BookingInfo> firstResult =
-                await service.CreateBookingAsync(existingEvent.Id);
-            ServiceResult<BookingInfo> secondResult =
-                await service.CreateBookingAsync(existingEvent.Id);
+            foreach (int _ in Enumerable.Range(0, totalSeats))
+            {
+                ServiceResult<BookingInfo> result =
+                    await service.CreateBookingAsync(existingEvent.Id);
 
-            BookingInfo firstBooking = Assert.IsType<BookingInfo>(firstResult.Data);
-            BookingInfo secondBooking = Assert.IsType<BookingInfo>(secondResult.Data);
-            Assert.NotEqual(firstBooking.Id, secondBooking.Id);
-            Assert.Equal(2, bookingRepository.Bookings.Count);
+                Assert.True(result.Success);
+                bookings.Add(Assert.IsType<BookingInfo>(result.Data));
+            }
+
+            Assert.Equal(totalSeats, bookings.Count);
+            Assert.Equal(totalSeats, bookings.Select(booking => booking.Id).Distinct().Count());
+            Assert.Equal(totalSeats, bookingRepository.Bookings.Count);
+            Assert.Equal(0, existingEvent.AvailableSeats);
         }
 
         [Fact]
@@ -192,8 +198,8 @@ namespace EventManager.Api.Tests.Services
         [Fact]
         public async Task CreateBookingAsync_PreventsOverbooking_WhenRequestsRunConcurrently()
         {
-            const int totalSeats = 3;
-            const int requestCount = 10;
+            const int totalSeats = 5;
+            const int requestCount = 20;
             Event existingEvent = CreateEvent(totalSeats);
             InMemoryEventRepository eventRepository = CreateEventRepository(existingEvent);
             InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
@@ -231,6 +237,30 @@ namespace EventManager.Api.Tests.Services
             Assert.Equal(totalSeats, bookingRepository.Bookings.Count);
             Assert.Equal(0, existingEvent.AvailableSeats);
             Assert.Equal(bookingIds.Length, bookingIds.Distinct().Count());
+        }
+
+        [Fact]
+        public async Task CreateBookingAsync_CreatesUniqueBookings_WhenRequestsMatchSeatLimitConcurrently()
+        {
+            const int totalSeats = 10;
+            Event existingEvent = CreateEvent(totalSeats);
+            InMemoryEventRepository eventRepository = CreateEventRepository(existingEvent);
+            InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
+            BookingService service = new BookingService(eventRepository, bookingRepository);
+
+            Task<ServiceResult<BookingInfo>>[] requests = Enumerable.Range(0, totalSeats)
+                .Select(_ => Task.Run(() => service.CreateBookingAsync(existingEvent.Id)))
+                .ToArray();
+
+            ServiceResult<BookingInfo>[] results = await Task.WhenAll(requests);
+            Assert.All(results, result => Assert.True(result.Success));
+            Guid[] bookingIds = results
+                .Select(result => Assert.IsType<BookingInfo>(result.Data).Id)
+                .ToArray();
+
+            Assert.Equal(totalSeats, bookingIds.Distinct().Count());
+            Assert.Equal(totalSeats, bookingRepository.Bookings.Count);
+            Assert.Equal(0, existingEvent.AvailableSeats);
         }
 
         [Fact]

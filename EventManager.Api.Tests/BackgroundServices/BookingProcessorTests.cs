@@ -1,6 +1,9 @@
 using EventManager.Api.BackgroundServices;
 using EventManager.Api.Models;
+using EventManager.Api.Models.Dtos;
+using EventManager.Api.Models.Results;
 using EventManager.Api.Repositories;
+using EventManager.Api.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -31,7 +34,7 @@ namespace EventManager.Api.Tests.BackgroundServices
         }
 
         [Fact]
-        public async Task ProcessPendingBookingsAsync_RejectsBookingAndReleasesSeat_WhenProcessingFails()
+        public async Task ProcessPendingBookingsAsync_RejectsBookingAndAllowsAnotherBooking_WhenProcessingFails()
         {
             Event @event = CreateEvent();
             Assert.True(@event.TryReserveSeats());
@@ -50,6 +53,16 @@ namespace EventManager.Api.Tests.BackgroundServices
             Assert.NotNull(booking.ProcessedAt);
             Assert.Same(booking, bookingRepository.Bookings[booking.Id]);
             Assert.Equal(1, @event.AvailableSeats);
+
+            BookingService bookingService = new BookingService(
+                eventRepository,
+                bookingRepository);
+            ServiceResult<BookingInfo> result =
+                await bookingService.CreateBookingAsync(@event.Id);
+
+            Assert.True(result.Success);
+            Assert.IsType<BookingInfo>(result.Data);
+            Assert.Equal(0, @event.AvailableSeats);
         }
 
         [Fact]
