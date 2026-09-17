@@ -206,7 +206,8 @@ namespace EventManager.Api.Tests.Services
                 "Тестовое событие",
                 null,
                 new DateTime(2030, 1, 1, 10, 0, 0),
-                new DateTime(2030, 1, 1, 12, 0, 0));
+                new DateTime(2030, 1, 1, 12, 0, 0),
+                10);
         }
 
         private static void AddBooking(

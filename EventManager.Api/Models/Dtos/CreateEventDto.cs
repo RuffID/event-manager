@@ -21,5 +21,10 @@ namespace EventManager.Api.Models.Dtos
         /// <summary>Получает или задаёт дату и время окончания создаваемого события.</summary>
         [Required(ErrorMessage = "Specify the end date.")]
         public DateTime? EndAt { get; set; }
+
+        /// <summary>Получает или задаёт общее количество мест на событии.</summary>
+        [Required(ErrorMessage = "Specify the total number of seats.")]
+        [Range(1, int.MaxValue, ErrorMessage = "The total number of seats must be greater than zero.")]
+        public int? TotalSeats { get; set; }
     }
 }

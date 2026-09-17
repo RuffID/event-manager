@@ -79,6 +79,9 @@ namespace EventManager.Api.Services
             if (endAt <= startAt)
                 return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "The end date must be later than the start date.");
 
+            if (dto.TotalSeats is not int totalSeats || totalSeats <= 0)
+                return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "The total number of seats must be greater than zero.");
+
             Event @event = dto.ToEvent();
             
             if (eventRepository.Events.TryAdd(@event.Id, @event))
@@ -101,7 +104,7 @@ namespace EventManager.Api.Services
 
             if (eventRepository.Events.TryGetValue(id, out Event? @event))
             {
-                Event updatedEvent = dto.ToEvent(id);
+                Event updatedEvent = dto.ToEvent(@event);
 
                 if (eventRepository.Events.TryUpdate(id, updatedEvent, @event))
                 {

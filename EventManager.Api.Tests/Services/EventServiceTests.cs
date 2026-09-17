@@ -19,7 +19,8 @@ namespace EventManager.Api.Tests.Services
                 Title = "Новая встреча",
                 Description = "Описание встречи",
                 StartAt = new DateTime(2026, 11, 10, 18, 0, 0),
-                EndAt = new DateTime(2026, 11, 10, 20, 0, 0)
+                EndAt = new DateTime(2026, 11, 10, 20, 0, 0),
+                TotalSeats = 25
             };
 
             ServiceResult<EventDto> result = service.CreateEvent(dto);
@@ -27,6 +28,8 @@ namespace EventManager.Api.Tests.Services
             Assert.True(result.Success);
             EventDto createdEvent = Assert.IsType<EventDto>(result.Data);
             Assert.Equal(dto.Title, createdEvent.Title);
+            Assert.Equal(dto.TotalSeats, createdEvent.TotalSeats);
+            Assert.Equal(dto.TotalSeats, createdEvent.AvailableSeats);
             Assert.True(repository.Events.ContainsKey(createdEvent.Id));
         }
 
@@ -361,6 +364,54 @@ namespace EventManager.Api.Tests.Services
             Assert.Equal(ServiceErrorType.Validation, error.Type);
         }
 
+        [Theory]
+        [InlineData(null)]
+        [InlineData(0)]
+        [InlineData(-1)]
+        public void CreateEvent_ReturnsValidationError_WhenTotalSeatsIsInvalid(int? totalSeats)
+        {
+            InMemoryEventRepository repository = CreateRepository();
+            EventService service = new EventService(repository);
+            CreateEventDto dto = new CreateEventDto
+            {
+                Title = "Новая встреча",
+                StartAt = new DateTime(2027, 3, 2, 10, 0, 0),
+                EndAt = new DateTime(2027, 3, 2, 12, 0, 0),
+                TotalSeats = totalSeats
+            };
+
+            ServiceResult<EventDto> result = service.CreateEvent(dto);
+
+            Assert.False(result.Success);
+            ServiceError error = Assert.IsType<ServiceError>(result.Error);
+            Assert.Equal(ServiceErrorType.Validation, error.Type);
+            Assert.Empty(repository.Events);
+        }
+
+        [Fact]
+        public void UpdateEvent_PreservesSeatCounts_WhenEventExists()
+        {
+            Event existingEvent = CreateStoredEvent(
+                "Существующая встреча",
+                new DateTime(2027, 3, 3, 10, 0, 0),
+                new DateTime(2027, 3, 3, 12, 0, 0));
+            Assert.True(existingEvent.TryReserveSeats(3));
+            EventService service = new EventService(CreateRepository(existingEvent));
+            UpdateEventDto dto = new UpdateEventDto
+            {
+                Title = "Обновлённая встреча",
+                StartAt = new DateTime(2027, 3, 3, 13, 0, 0),
+                EndAt = new DateTime(2027, 3, 3, 15, 0, 0)
+            };
+
+            ServiceResult<EventDto> result = service.UpdateEvent(existingEvent.Id, dto);
+
+            Assert.True(result.Success);
+            EventDto updatedEvent = Assert.IsType<EventDto>(result.Data);
+            Assert.Equal(10, updatedEvent.TotalSeats);
+            Assert.Equal(7, updatedEvent.AvailableSeats);
+        }
+
         [Fact]
         public void UpdateEvent_ReturnsValidationError_WhenEndDateIsBeforeStartDate()
         {
@@ -399,7 +450,7 @@ namespace EventManager.Api.Tests.Services
 
         private static Event CreateStoredEvent(string title, DateTime startAt, DateTime endAt)
         {
-            return new Event(Guid.NewGuid(), title, null, startAt, endAt);
+            return new Event(Guid.NewGuid(), title, null, startAt, endAt, 10);
         }
     }
 }

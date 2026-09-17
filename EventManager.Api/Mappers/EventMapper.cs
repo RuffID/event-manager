@@ -19,7 +19,9 @@ namespace EventManager.Api.Mappers
                 Title = @event.Title,
                 Description = @event.Description,
                 StartAt = @event.StartAt,
-                EndAt = @event.EndAt
+                EndAt = @event.EndAt,
+                TotalSeats = @event.TotalSeats,
+                AvailableSeats = @event.AvailableSeats
             };
         }
 
@@ -28,22 +30,21 @@ namespace EventManager.Api.Mappers
         /// <returns>Новая сущность события.</returns>
         public static Event ToEvent(this CreateEventDto dto)
         {
-            return new Event(
-                Guid.NewGuid(),
+            return Event.Create(
                 dto.Title,
                 dto.Description,
                 dto.StartAt!.Value,
-                dto.EndAt!.Value);
+                dto.EndAt!.Value,
+                dto.TotalSeats!.Value);
         }
 
         /// <summary>Создаёт сущность события из DTO запроса на обновление.</summary>
         /// <param name="dto">DTO с новыми данными события.</param>
-        /// <param name="id">Идентификатор обновляемого события.</param>
+        /// <param name="event">Обновляемое событие.</param>
         /// <returns>Сущность события с обновлёнными данными.</returns>
-        public static Event ToEvent(this UpdateEventDto dto, Guid id)
+        public static Event ToEvent(this UpdateEventDto dto, Event @event)
         {
-            return new Event(
-                id,
+            return @event.UpdateDetails(
                 dto.Title,
                 dto.Description,
                 dto.StartAt!.Value,

@@ -63,7 +63,9 @@ GET /events?title=workshop&from=2026-09-01T00:00:00&to=2026-09-30T23:59:59&page=
       "title": "Воркшоп по ASP.NET Core",
       "description": "Практика разработки Web API.",
       "startAt": "2026-09-19T11:00:00",
-      "endAt": "2026-09-19T14:00:00"
+      "endAt": "2026-09-19T14:00:00",
+      "totalSeats": 30,
+      "availableSeats": 30
     }
   ],
   "page": 1,
@@ -80,11 +82,12 @@ GET /events?title=workshop&from=2026-09-01T00:00:00&to=2026-09-30T23:59:59&page=
   "title": "Воркшоп по ASP.NET Core",
   "description": "Практика разработки Web API.",
   "startAt": "2026-09-19T11:00:00",
-  "endAt": "2026-09-19T14:00:00"
+  "endAt": "2026-09-19T14:00:00",
+  "totalSeats": 30
 }
 ```
 
-Успешный ответ содержит созданное событие и заголовок `Location` со ссылкой на него:
+`totalSeats` обязателен и должен быть больше нуля. Успешный ответ содержит созданное событие, поля `totalSeats` и `availableSeats` с одинаковым начальным значением, а также заголовок `Location` со ссылкой на событие:
 
 ```text
 Location: /events/{id}
@@ -94,7 +97,7 @@ Location: /events/{id}
 
 `PUT /events/{id}`
 
-Тело запроса имеет тот же формат, что и при создании события.
+Тело запроса содержит `title`, `description`, `startAt` и `endAt`. Общее и доступное количество мест при обновлении события сохраняется.
 
 ## Бронирования
 
@@ -166,7 +169,8 @@ Content-Type: application/json
   "title": "Воркшоп по ASP.NET Core",
   "description": "Практика разработки Web API.",
   "startAt": "2026-09-19T11:00:00",
-  "endAt": "2026-09-19T14:00:00"
+  "endAt": "2026-09-19T14:00:00",
+  "totalSeats": 30
 }
 ```
 
@@ -200,9 +204,10 @@ dotnet test .\EventManager.Api.Tests\EventManager.Api.Tests.csproj
 
 ## Валидация
 
-- `title`, `startAt` и `endAt` обязательны;
+- `title`, `startAt`, `endAt` и `totalSeats` обязательны;
 - `title` не может быть пустым или состоять только из пробелов;
-- дата окончания должна быть позже даты начала.
+- дата окончания должна быть позже даты начала;
+- `totalSeats` должно быть больше нуля.
 
 При невалидных данных API возвращает `400 Bad Request`. Если событие или бронь не найдены, API возвращает `404 Not Found`. Ошибки сервисного слоя представлены в формате `ProblemDetails`:
 
