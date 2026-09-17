@@ -1,3 +1,4 @@
+using EventManager.Api.Exceptions;
 using EventManager.Api.Mappers;
 using EventManager.Api.Models;
 using EventManager.Api.Models.Dtos;
@@ -15,29 +16,38 @@ namespace EventManager.Api.Services
         InMemoryEventRepository eventRepository,
         InMemoryBookingRepository bookingRepository) : IBookingService
     {
+        private readonly object _bookingLock = new();
+
         /// <inheritdoc />
         public Task<ServiceResult<BookingInfo>> CreateBookingAsync(Guid eventId)
         {
-            if (!eventRepository.Events.ContainsKey(eventId))
+            lock (_bookingLock)
             {
+                if (!eventRepository.Events.TryGetValue(eventId, out Event? @event))
+                {
+                    return Task.FromResult(
+                        ServiceResult<BookingInfo>.Fail(
+                            ServiceErrorType.NotFound,
+                            "Event not found."));
+                }
+
+                if (!@event.TryReserveSeats())
+                    throw new NoAvailableSeatsException();
+
+                Booking booking = new Booking(eventId);
+
+                if (bookingRepository.Bookings.TryAdd(booking.Id, booking))
+                {
+                    return Task.FromResult(
+                        ServiceResult<BookingInfo>.Succeed(booking.ToInfo()));
+                }
+
+                @event.ReleaseSeats();
                 return Task.FromResult(
                     ServiceResult<BookingInfo>.Fail(
-                        ServiceErrorType.NotFound,
-                        "Event not found."));
+                        ServiceErrorType.Internal,
+                        "Failed to create booking."));
             }
-
-            Booking booking = new Booking(eventId);
-
-            if (bookingRepository.Bookings.TryAdd(booking.Id, booking))
-            {
-                return Task.FromResult(
-                    ServiceResult<BookingInfo>.Succeed(booking.ToInfo()));
-            }
-
-            return Task.FromResult(
-                ServiceResult<BookingInfo>.Fail(
-                    ServiceErrorType.Internal,
-                    "Failed to create booking."));
         }
 
         /// <inheritdoc />

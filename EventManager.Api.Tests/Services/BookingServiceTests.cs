@@ -1,3 +1,4 @@
+using EventManager.Api.Exceptions;
 using EventManager.Api.Models;
 using EventManager.Api.Models.Dtos;
 using EventManager.Api.Models.Results;
@@ -28,6 +29,7 @@ namespace EventManager.Api.Tests.Services
             Assert.Equal(BookingStatus.Pending, booking.Status);
             Assert.Null(booking.ProcessedAt);
             Assert.True(bookingRepository.Bookings.ContainsKey(booking.Id));
+            Assert.Equal(9, existingEvent.AvailableSeats);
         }
 
         [Fact]
@@ -170,6 +172,68 @@ namespace EventManager.Api.Tests.Services
         }
 
         [Fact]
+        public async Task CreateBookingAsync_ThrowsNoAvailableSeatsException_WhenEventIsFull()
+        {
+            Event existingEvent = CreateEvent(totalSeats: 1);
+            InMemoryEventRepository eventRepository = CreateEventRepository(existingEvent);
+            InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
+            BookingService service = new BookingService(eventRepository, bookingRepository);
+            await service.CreateBookingAsync(existingEvent.Id);
+
+            Func<Task> action = () => service.CreateBookingAsync(existingEvent.Id);
+
+            NoAvailableSeatsException exception =
+                await Assert.ThrowsAsync<NoAvailableSeatsException>(action);
+            Assert.Equal("No available seats for this event", exception.Message);
+            Assert.Single(bookingRepository.Bookings);
+            Assert.Equal(0, existingEvent.AvailableSeats);
+        }
+
+        [Fact]
+        public async Task CreateBookingAsync_PreventsOverbooking_WhenRequestsRunConcurrently()
+        {
+            const int totalSeats = 3;
+            const int requestCount = 10;
+            Event existingEvent = CreateEvent(totalSeats);
+            InMemoryEventRepository eventRepository = CreateEventRepository(existingEvent);
+            InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
+            BookingService service = new BookingService(eventRepository, bookingRepository);
+
+            Task<object>[] requests = Enumerable.Range(0, requestCount)
+                .Select(_ => Task.Run(async () =>
+                {
+                    try
+                    {
+                        return (object)await service.CreateBookingAsync(existingEvent.Id);
+                    }
+                    catch (Exception exception)
+                    {
+                        return exception;
+                    }
+                }))
+                .ToArray();
+
+            object[] outcomes = await Task.WhenAll(requests);
+
+            ServiceResult<BookingInfo>[] successfulResults = outcomes
+                .OfType<ServiceResult<BookingInfo>>()
+                .Where(result => result.Success)
+                .ToArray();
+            NoAvailableSeatsException[] conflicts = outcomes
+                .OfType<NoAvailableSeatsException>()
+                .ToArray();
+            Guid[] bookingIds = successfulResults
+                .Select(result => Assert.IsType<BookingInfo>(result.Data).Id)
+                .ToArray();
+
+            Assert.Equal(totalSeats, successfulResults.Length);
+            Assert.Equal(requestCount - totalSeats, conflicts.Length);
+            Assert.Equal(totalSeats, bookingRepository.Bookings.Count);
+            Assert.Equal(0, existingEvent.AvailableSeats);
+            Assert.Equal(bookingIds.Length, bookingIds.Distinct().Count());
+        }
+
+        [Fact]
         public async Task GetBookingByIdAsync_ReturnsNotFound_WhenBookingDoesNotExist()
         {
             BookingService service = new BookingService(
@@ -199,7 +263,7 @@ namespace EventManager.Api.Tests.Services
             return repository;
         }
 
-        private static Event CreateEvent()
+        private static Event CreateEvent(int totalSeats = 10)
         {
             return new Event(
                 Guid.NewGuid(),
@@ -207,7 +271,7 @@ namespace EventManager.Api.Tests.Services
                 null,
                 new DateTime(2030, 1, 1, 10, 0, 0),
                 new DateTime(2030, 1, 1, 12, 0, 0),
-                10);
+                totalSeats);
         }
 
         private static void AddBooking(
