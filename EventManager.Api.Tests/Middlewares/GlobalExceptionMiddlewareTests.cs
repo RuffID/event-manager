@@ -11,14 +11,17 @@ namespace EventManager.Api.Tests.Middlewares
         [Fact]
         public async Task InvokeAsync_ReturnsConflict_WhenNoSeatsAreAvailable()
         {
+            // Arrange
             RequestDelegate next = _ => throw new NoAvailableSeatsException();
             GlobalExceptionMiddleware middleware = new GlobalExceptionMiddleware(
                 next,
                 NullLogger<GlobalExceptionMiddleware>.Instance);
             DefaultHttpContext context = new DefaultHttpContext();
 
+            // Act
             await middleware.InvokeAsync(context);
 
+            // Assert
             Assert.Equal(StatusCodes.Status409Conflict, context.Response.StatusCode);
         }
     }

@@ -14,6 +14,7 @@ namespace EventManager.Api.Tests.BackgroundServices
         [Fact]
         public async Task ProcessPendingBookingsAsync_ConfirmsAndStoresBooking_WhenBookingIsPending()
         {
+            // Arrange
             Event @event = CreateEvent();
             Assert.True(@event.TryReserveSeats());
             InMemoryEventRepository eventRepository = CreateEventRepository(@event);
@@ -25,8 +26,10 @@ namespace EventManager.Api.Tests.BackgroundServices
                 eventRepository,
                 new ImmediateBookingProcessingDelay());
 
+            // Act
             await processor.ProcessPendingBookingsAsync(CancellationToken.None);
 
+            // Assert
             Assert.Equal(BookingStatus.Confirmed, booking.Status);
             Assert.NotNull(booking.ProcessedAt);
             Assert.Same(booking, bookingRepository.Bookings[booking.Id]);
@@ -36,6 +39,7 @@ namespace EventManager.Api.Tests.BackgroundServices
         [Fact]
         public async Task ProcessPendingBookingsAsync_RejectsBookingAndAllowsAnotherBooking_WhenProcessingFails()
         {
+            // Arrange
             Event @event = CreateEvent();
             Assert.True(@event.TryReserveSeats());
             InMemoryEventRepository eventRepository = CreateEventRepository(@event);
@@ -47,19 +51,23 @@ namespace EventManager.Api.Tests.BackgroundServices
                 eventRepository,
                 new FailingBookingProcessingDelay());
 
+            // Act
             await processor.ProcessPendingBookingsAsync(CancellationToken.None);
 
+            // Assert
             Assert.Equal(BookingStatus.Rejected, booking.Status);
             Assert.NotNull(booking.ProcessedAt);
             Assert.Same(booking, bookingRepository.Bookings[booking.Id]);
             Assert.Equal(1, @event.AvailableSeats);
 
+            // Act
             BookingService bookingService = new BookingService(
                 eventRepository,
                 bookingRepository);
             ServiceResult<BookingInfo> result =
                 await bookingService.CreateBookingAsync(@event.Id);
 
+            // Assert
             Assert.True(result.Success);
             Assert.IsType<BookingInfo>(result.Data);
             Assert.Equal(0, @event.AvailableSeats);
@@ -68,6 +76,7 @@ namespace EventManager.Api.Tests.BackgroundServices
         [Fact]
         public async Task ProcessPendingBookingsAsync_ThrowsOperationCanceledException_WhenCancellationIsRequested()
         {
+            // Arrange
             Event @event = CreateEvent();
             Assert.True(@event.TryReserveSeats());
             InMemoryEventRepository eventRepository = CreateEventRepository(@event);
@@ -81,8 +90,10 @@ namespace EventManager.Api.Tests.BackgroundServices
             using CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
             cancellationTokenSource.Cancel();
 
+            // Act
             Task action = processor.ProcessPendingBookingsAsync(cancellationTokenSource.Token);
 
+            // Assert
             await Assert.ThrowsAsync<OperationCanceledException>(() => action);
             Assert.Equal(BookingStatus.Pending, booking.Status);
             Assert.Null(booking.ProcessedAt);
@@ -92,6 +103,7 @@ namespace EventManager.Api.Tests.BackgroundServices
         [Fact]
         public async Task ProcessPendingBookingsAsync_RejectsBooking_WhenEventWasDeleted()
         {
+            // Arrange
             Event @event = CreateEvent();
             Assert.True(@event.TryReserveSeats());
             InMemoryEventRepository eventRepository = CreateEventRepository(@event);
@@ -104,8 +116,10 @@ namespace EventManager.Api.Tests.BackgroundServices
                 eventRepository,
                 new ImmediateBookingProcessingDelay());
 
+            // Act
             await processor.ProcessPendingBookingsAsync(CancellationToken.None);
 
+            // Assert
             Assert.Equal(BookingStatus.Rejected, booking.Status);
             Assert.NotNull(booking.ProcessedAt);
             Assert.Same(booking, bookingRepository.Bookings[booking.Id]);
@@ -114,6 +128,7 @@ namespace EventManager.Api.Tests.BackgroundServices
         [Fact]
         public async Task ProcessPendingBookingsAsync_StartsPendingBookingsInParallel()
         {
+            // Arrange
             const int bookingCount = 3;
             Event @event = CreateEvent(totalSeats: bookingCount);
             InMemoryEventRepository eventRepository = CreateEventRepository(@event);
@@ -135,12 +150,14 @@ namespace EventManager.Api.Tests.BackgroundServices
             using CancellationTokenSource cancellationTokenSource =
                 new CancellationTokenSource(TimeSpan.FromSeconds(2));
 
+            // Act
             Task processingTask = processor.ProcessPendingBookingsAsync(
                 cancellationTokenSource.Token);
 
             await processingDelay.AllCallsStarted.WaitAsync(cancellationTokenSource.Token);
             await processingTask;
 
+            // Assert
             Assert.All(
                 bookingRepository.Bookings.Values,
                 booking => Assert.Equal(BookingStatus.Confirmed, booking.Status));

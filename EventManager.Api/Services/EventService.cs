@@ -83,7 +83,7 @@ namespace EventManager.Api.Services
                 return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "The total number of seats must be greater than zero.");
 
             Event @event = dto.ToEvent();
-            
+
             if (eventRepository.Events.TryAdd(@event.Id, @event))
                 return ServiceResult<EventDto>.Succeed(@event.ToDto());
 
@@ -102,28 +102,32 @@ namespace EventManager.Api.Services
             if (endAt <= startAt)
                 return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "The end date must be later than the start date.");
 
-            if (eventRepository.Events.TryGetValue(id, out Event? @event))
+            return eventRepository.ExecuteSynchronized(() =>
             {
-                Event updatedEvent = dto.ToEvent(@event);
-
-                if (eventRepository.Events.TryUpdate(id, updatedEvent, @event))
+                if (eventRepository.Events.TryGetValue(id, out Event? @event))
                 {
-                    return ServiceResult<EventDto>.Succeed(updatedEvent.ToDto());
-                }
-                
-                return ServiceResult<EventDto>.Fail(ServiceErrorType.NotFound, "Event not found.");
-            }
+                    Event updatedEvent = dto.ToEvent(@event);
 
-            return ServiceResult<EventDto>.Fail(ServiceErrorType.NotFound, "Event not found.");            
+                    if (eventRepository.Events.TryUpdate(id, updatedEvent, @event))
+                    {
+                        return ServiceResult<EventDto>.Succeed(updatedEvent.ToDto());
+                    }
+                }
+
+                return ServiceResult<EventDto>.Fail(ServiceErrorType.NotFound, "Event not found.");
+            });
         }
 
         /// <inheritdoc />
         public ServiceResult DeleteEvent(Guid id)
         {
-            if (eventRepository.Events.TryRemove(id, out _))
-                return ServiceResult.Succeed();
+            return eventRepository.ExecuteSynchronized(() =>
+            {
+                if (eventRepository.Events.TryRemove(id, out _))
+                    return ServiceResult.Succeed();
 
-            return ServiceResult.Fail(ServiceErrorType.NotFound, "Event not found.");            
+                return ServiceResult.Fail(ServiceErrorType.NotFound, "Event not found.");
+            });
         }
     }
 }

@@ -93,6 +93,7 @@ namespace EventManager.Api.BackgroundServices
 
         private async Task RejectBookingAsync(Booking booking)
         {
+            // Компенсация после ошибки должна завершиться даже при остановке приложения.
             await _processingSemaphore.WaitAsync(CancellationToken.None);
 
             try

@@ -9,8 +9,12 @@ namespace EventManager.Api.Tests.Models
         [Fact]
         public void Create_InitializesAllSeatsAsAvailable_WhenTotalSeatsIsValid()
         {
+            // Arrange
+
+            // Act
             Event @event = CreateEvent(totalSeats: 10);
 
+            // Assert
             Assert.Equal(10, @event.TotalSeats);
             Assert.Equal(10, @event.AvailableSeats);
         }
@@ -20,18 +24,25 @@ namespace EventManager.Api.Tests.Models
         [InlineData(-1)]
         public void Create_ThrowsValidationException_WhenTotalSeatsIsNotPositive(int totalSeats)
         {
+            // Arrange
+
+            // Act
             Action action = () => CreateEvent(totalSeats);
 
+            // Assert
             Assert.Throws<ValidationException>(action);
         }
 
         [Fact]
         public void TryReserveSeats_DecreasesAvailableSeats_WhenEnoughSeatsAreAvailable()
         {
+            // Arrange
             Event @event = CreateEvent(totalSeats: 5);
 
+            // Act
             bool reserved = @event.TryReserveSeats(2);
 
+            // Assert
             Assert.True(reserved);
             Assert.Equal(3, @event.AvailableSeats);
         }
@@ -39,10 +50,13 @@ namespace EventManager.Api.Tests.Models
         [Fact]
         public void TryReserveSeats_DoesNotChangeAvailableSeats_WhenSeatsAreInsufficient()
         {
+            // Arrange
             Event @event = CreateEvent(totalSeats: 2);
 
+            // Act
             bool reserved = @event.TryReserveSeats(3);
 
+            // Assert
             Assert.False(reserved);
             Assert.Equal(2, @event.AvailableSeats);
         }
@@ -50,21 +64,27 @@ namespace EventManager.Api.Tests.Models
         [Fact]
         public void ReleaseSeats_IncreasesAvailableSeats_WhenSeatsWereReserved()
         {
+            // Arrange
             Event @event = CreateEvent(totalSeats: 5);
             Assert.True(@event.TryReserveSeats(2));
 
+            // Act
             @event.ReleaseSeats();
 
+            // Assert
             Assert.Equal(4, @event.AvailableSeats);
         }
 
         [Fact]
         public void ReleaseSeats_ThrowsInvalidOperationException_WhenNoSeatsWereReserved()
         {
+            // Arrange
             Event @event = CreateEvent(totalSeats: 5);
 
+            // Act
             Action action = () => @event.ReleaseSeats();
 
+            // Assert
             Assert.Throws<InvalidOperationException>(action);
             Assert.Equal(5, @event.AvailableSeats);
         }

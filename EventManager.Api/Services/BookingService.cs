@@ -16,19 +16,16 @@ namespace EventManager.Api.Services
         InMemoryEventRepository eventRepository,
         InMemoryBookingRepository bookingRepository) : IBookingService
     {
-        private readonly object _bookingLock = new();
-
         /// <inheritdoc />
         public Task<ServiceResult<BookingInfo>> CreateBookingAsync(Guid eventId)
         {
-            lock (_bookingLock)
+            ServiceResult<BookingInfo> result = eventRepository.ExecuteSynchronized(() =>
             {
                 if (!eventRepository.Events.TryGetValue(eventId, out Event? @event))
                 {
-                    return Task.FromResult(
-                        ServiceResult<BookingInfo>.Fail(
-                            ServiceErrorType.NotFound,
-                            "Event not found."));
+                    return ServiceResult<BookingInfo>.Fail(
+                        ServiceErrorType.NotFound,
+                        "Event not found.");
                 }
 
                 if (!@event.TryReserveSeats())
@@ -38,16 +35,16 @@ namespace EventManager.Api.Services
 
                 if (bookingRepository.Bookings.TryAdd(booking.Id, booking))
                 {
-                    return Task.FromResult(
-                        ServiceResult<BookingInfo>.Succeed(booking.ToInfo()));
+                    return ServiceResult<BookingInfo>.Succeed(booking.ToInfo());
                 }
 
                 @event.ReleaseSeats();
-                return Task.FromResult(
-                    ServiceResult<BookingInfo>.Fail(
-                        ServiceErrorType.Internal,
-                        "Failed to create booking."));
-            }
+                return ServiceResult<BookingInfo>.Fail(
+                    ServiceErrorType.Internal,
+                    "Failed to create booking.");
+            });
+
+            return Task.FromResult(result);
         }
 
         /// <inheritdoc />

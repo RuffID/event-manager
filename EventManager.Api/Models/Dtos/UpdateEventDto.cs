@@ -17,7 +17,7 @@ namespace EventManager.Api.Models.Dtos
         /// <summary>Получает или задаёт новые дату и время начала события.</summary>
         [Required(ErrorMessage = "Specify the start date.")]
         public DateTime? StartAt { get; set; }
-        
+
         /// <summary>Получает или задаёт новые дату и время окончания события.</summary>
         [Required(ErrorMessage = "Specify the end date.")]
         public DateTime? EndAt { get; set; }

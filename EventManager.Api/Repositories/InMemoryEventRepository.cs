@@ -8,10 +8,20 @@ namespace EventManager.Api.Repositories
     /// </summary>
     public class InMemoryEventRepository
     {
+        private readonly Lock _eventsLock = new();
+
         /// <summary>
         /// Получает потокобезопасную коллекцию событий, где ключом является идентификатор события.
         /// </summary>
         public ConcurrentDictionary<Guid, Event> Events { get; } = new();
+
+        internal TResult ExecuteSynchronized<TResult>(Func<TResult> operation)
+        {
+            lock (_eventsLock)
+            {
+                return operation();
+            }
+        }
 
         /// <summary>
         /// Инициализирует хранилище тестовыми событиями.
