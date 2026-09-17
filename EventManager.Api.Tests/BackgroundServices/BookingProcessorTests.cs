@@ -11,45 +11,59 @@ namespace EventManager.Api.Tests.BackgroundServices
         [Fact]
         public async Task ProcessPendingBookingsAsync_ConfirmsAndStoresBooking_WhenBookingIsPending()
         {
-            InMemoryBookingRepository repository = new InMemoryBookingRepository();
-            Booking booking = new Booking(Guid.NewGuid());
-            repository.Bookings.TryAdd(booking.Id, booking);
+            Event @event = CreateEvent();
+            Assert.True(@event.TryReserveSeats());
+            InMemoryEventRepository eventRepository = CreateEventRepository(@event);
+            InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
+            Booking booking = new Booking(@event.Id);
+            bookingRepository.Bookings.TryAdd(booking.Id, booking);
             BookingProcessor processor = CreateProcessor(
-                repository,
+                bookingRepository,
+                eventRepository,
                 new ImmediateBookingProcessingDelay());
 
             await processor.ProcessPendingBookingsAsync(CancellationToken.None);
 
             Assert.Equal(BookingStatus.Confirmed, booking.Status);
             Assert.NotNull(booking.ProcessedAt);
-            Assert.Same(booking, repository.Bookings[booking.Id]);
+            Assert.Same(booking, bookingRepository.Bookings[booking.Id]);
+            Assert.Equal(0, @event.AvailableSeats);
         }
 
         [Fact]
-        public async Task ProcessPendingBookingsAsync_ThrowsAndLeavesBookingPending_WhenProcessingFails()
+        public async Task ProcessPendingBookingsAsync_RejectsBookingAndReleasesSeat_WhenProcessingFails()
         {
-            InMemoryBookingRepository repository = new InMemoryBookingRepository();
-            Booking booking = new Booking(Guid.NewGuid());
-            repository.Bookings.TryAdd(booking.Id, booking);
+            Event @event = CreateEvent();
+            Assert.True(@event.TryReserveSeats());
+            InMemoryEventRepository eventRepository = CreateEventRepository(@event);
+            InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
+            Booking booking = new Booking(@event.Id);
+            bookingRepository.Bookings.TryAdd(booking.Id, booking);
             BookingProcessor processor = CreateProcessor(
-                repository,
+                bookingRepository,
+                eventRepository,
                 new FailingBookingProcessingDelay());
 
-            Task action = processor.ProcessPendingBookingsAsync(CancellationToken.None);
+            await processor.ProcessPendingBookingsAsync(CancellationToken.None);
 
-            await Assert.ThrowsAsync<ApplicationException>(() => action);
-            Assert.Equal(BookingStatus.Pending, booking.Status);
-            Assert.Null(booking.ProcessedAt);
+            Assert.Equal(BookingStatus.Rejected, booking.Status);
+            Assert.NotNull(booking.ProcessedAt);
+            Assert.Same(booking, bookingRepository.Bookings[booking.Id]);
+            Assert.Equal(1, @event.AvailableSeats);
         }
 
         [Fact]
         public async Task ProcessPendingBookingsAsync_ThrowsOperationCanceledException_WhenCancellationIsRequested()
         {
-            InMemoryBookingRepository repository = new InMemoryBookingRepository();
-            Booking booking = new Booking(Guid.NewGuid());
-            repository.Bookings.TryAdd(booking.Id, booking);
+            Event @event = CreateEvent();
+            Assert.True(@event.TryReserveSeats());
+            InMemoryEventRepository eventRepository = CreateEventRepository(@event);
+            InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
+            Booking booking = new Booking(@event.Id);
+            bookingRepository.Bookings.TryAdd(booking.Id, booking);
             BookingProcessor processor = CreateProcessor(
-                repository,
+                bookingRepository,
+                eventRepository,
                 new ImmediateBookingProcessingDelay());
             using CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
             cancellationTokenSource.Cancel();
@@ -59,16 +73,100 @@ namespace EventManager.Api.Tests.BackgroundServices
             await Assert.ThrowsAsync<OperationCanceledException>(() => action);
             Assert.Equal(BookingStatus.Pending, booking.Status);
             Assert.Null(booking.ProcessedAt);
+            Assert.Equal(0, @event.AvailableSeats);
+        }
+
+        [Fact]
+        public async Task ProcessPendingBookingsAsync_RejectsBooking_WhenEventWasDeleted()
+        {
+            Event @event = CreateEvent();
+            Assert.True(@event.TryReserveSeats());
+            InMemoryEventRepository eventRepository = CreateEventRepository(@event);
+            InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
+            Booking booking = new Booking(@event.Id);
+            bookingRepository.Bookings.TryAdd(booking.Id, booking);
+            Assert.True(eventRepository.Events.TryRemove(@event.Id, out _));
+            BookingProcessor processor = CreateProcessor(
+                bookingRepository,
+                eventRepository,
+                new ImmediateBookingProcessingDelay());
+
+            await processor.ProcessPendingBookingsAsync(CancellationToken.None);
+
+            Assert.Equal(BookingStatus.Rejected, booking.Status);
+            Assert.NotNull(booking.ProcessedAt);
+            Assert.Same(booking, bookingRepository.Bookings[booking.Id]);
+        }
+
+        [Fact]
+        public async Task ProcessPendingBookingsAsync_StartsPendingBookingsInParallel()
+        {
+            const int bookingCount = 3;
+            Event @event = CreateEvent(totalSeats: bookingCount);
+            InMemoryEventRepository eventRepository = CreateEventRepository(@event);
+            InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
+
+            for (int index = 0; index < bookingCount; index++)
+            {
+                Assert.True(@event.TryReserveSeats());
+                Booking booking = new Booking(@event.Id);
+                bookingRepository.Bookings.TryAdd(booking.Id, booking);
+            }
+
+            CoordinatedBookingProcessingDelay processingDelay =
+                new CoordinatedBookingProcessingDelay(bookingCount);
+            BookingProcessor processor = CreateProcessor(
+                bookingRepository,
+                eventRepository,
+                processingDelay);
+            using CancellationTokenSource cancellationTokenSource =
+                new CancellationTokenSource(TimeSpan.FromSeconds(2));
+
+            Task processingTask = processor.ProcessPendingBookingsAsync(
+                cancellationTokenSource.Token);
+
+            await processingDelay.AllCallsStarted.WaitAsync(cancellationTokenSource.Token);
+            await processingTask;
+
+            Assert.All(
+                bookingRepository.Bookings.Values,
+                booking => Assert.Equal(BookingStatus.Confirmed, booking.Status));
         }
 
         private static BookingProcessor CreateProcessor(
-            InMemoryBookingRepository repository,
+            InMemoryBookingRepository bookingRepository,
+            InMemoryEventRepository eventRepository,
             IBookingProcessingDelay processingDelay)
         {
             return new BookingProcessor(
-                repository,
+                bookingRepository,
+                eventRepository,
                 processingDelay,
                 NullLogger<BookingProcessor>.Instance);
+        }
+
+        private static Event CreateEvent(int totalSeats = 1)
+        {
+            return Event.Create(
+                "Тестовое событие",
+                null,
+                new DateTime(2030, 1, 1, 10, 0, 0),
+                new DateTime(2030, 1, 1, 12, 0, 0),
+                totalSeats);
+        }
+
+        private static InMemoryEventRepository CreateEventRepository(params Event[] events)
+        {
+            InMemoryEventRepository repository = new InMemoryEventRepository();
+            repository.Events.Clear();
+
+            foreach (Event @event in events)
+            {
+                if (!repository.Events.TryAdd(@event.Id, @event))
+                    throw new InvalidOperationException("Event identifiers in a test must be unique.");
+            }
+
+            return repository;
         }
 
         private class ImmediateBookingProcessingDelay : IBookingProcessingDelay
@@ -85,7 +183,25 @@ namespace EventManager.Api.Tests.BackgroundServices
             public Task WaitAsync(CancellationToken cancellationToken)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                return Task.FromException(new ApplicationException("Processing failed."));
+                return Task.FromException(new InvalidOperationException("Processing failed."));
+            }
+        }
+
+        private class CoordinatedBookingProcessingDelay(int expectedCalls)
+            : IBookingProcessingDelay
+        {
+            private readonly TaskCompletionSource<bool> _allCallsStarted =
+                new(TaskCreationOptions.RunContinuationsAsynchronously);
+            private int _callCount;
+
+            public Task AllCallsStarted => _allCallsStarted.Task;
+
+            public async Task WaitAsync(CancellationToken cancellationToken)
+            {
+                if (Interlocked.Increment(ref _callCount) == expectedCalls)
+                    _allCallsStarted.TrySetResult(true);
+
+                await _allCallsStarted.Task.WaitAsync(cancellationToken);
             }
         }
     }

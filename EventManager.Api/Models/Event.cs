@@ -7,6 +7,9 @@ namespace EventManager.Api.Models
     /// </summary>
     public class Event
     {
+        private readonly object _seatLock = new();
+        private int _availableSeats;
+
         /// <summary>Получает уникальный идентификатор события.</summary>
         public Guid Id { get; }
 
@@ -26,7 +29,16 @@ namespace EventManager.Api.Models
         public int TotalSeats { get; }
 
         /// <summary>Получает текущее количество свободных мест.</summary>
-        public int AvailableSeats { get; private set; }
+        public int AvailableSeats
+        {
+            get
+            {
+                lock (_seatLock)
+                {
+                    return _availableSeats;
+                }
+            }
+        }
 
         /// <summary>Создаёт событие в корректном состоянии.</summary>
         /// <param name="id">Уникальный идентификатор события.</param>
@@ -78,7 +90,7 @@ namespace EventManager.Api.Models
             StartAt = startAt;
             EndAt = endAt;
             TotalSeats = totalSeats;
-            AvailableSeats = availableSeats;
+            _availableSeats = availableSeats;
         }
 
         /// <summary>Создаёт новое событие с указанным количеством мест.</summary>
@@ -111,11 +123,14 @@ namespace EventManager.Api.Models
         {
             ArgumentOutOfRangeException.ThrowIfLessThan(count, 1);
 
-            if (AvailableSeats < count)
-                return false;
+            lock (_seatLock)
+            {
+                if (_availableSeats < count)
+                    return false;
 
-            AvailableSeats -= count;
-            return true;
+                _availableSeats -= count;
+                return true;
+            }
         }
 
         /// <summary>Возвращает указанное количество мест в пул доступных.</summary>
@@ -124,10 +139,13 @@ namespace EventManager.Api.Models
         {
             ArgumentOutOfRangeException.ThrowIfLessThan(count, 1);
 
-            if (count > TotalSeats - AvailableSeats)
-                throw new InvalidOperationException("Cannot release more seats than have been reserved.");
+            lock (_seatLock)
+            {
+                if (count > TotalSeats - _availableSeats)
+                    throw new InvalidOperationException("Cannot release more seats than have been reserved.");
 
-            AvailableSeats += count;
+                _availableSeats += count;
+            }
         }
 
         /// <summary>Создаёт версию события с обновлёнными общими данными и прежним состоянием мест.</summary>
@@ -142,14 +160,17 @@ namespace EventManager.Api.Models
             DateTime startAt,
             DateTime endAt)
         {
-            return new Event(
-                Id,
-                title,
-                description,
-                startAt,
-                endAt,
-                TotalSeats,
-                AvailableSeats);
+            lock (_seatLock)
+            {
+                return new Event(
+                    Id,
+                    title,
+                    description,
+                    startAt,
+                    endAt,
+                    TotalSeats,
+                    _availableSeats);
+            }
         }
     }
 }

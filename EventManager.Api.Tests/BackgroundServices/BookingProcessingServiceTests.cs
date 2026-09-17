@@ -13,6 +13,7 @@ namespace EventManager.Api.Tests.BackgroundServices
             InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
             BookingProcessor bookingProcessor = new BookingProcessor(
                 bookingRepository,
+                new InMemoryEventRepository(),
                 new ImmediateBookingProcessingDelay(),
                 NullLogger<BookingProcessor>.Instance);
             using BookingProcessingService service = new BookingProcessingService(
