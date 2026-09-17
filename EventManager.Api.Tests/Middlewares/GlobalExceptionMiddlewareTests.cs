@@ -1,0 +1,28 @@
+using EventManager.Api.Exceptions;
+using EventManager.Api.Middlewares;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging.Abstractions;
+using Xunit;
+
+namespace EventManager.Api.Tests.Middlewares
+{
+    public class GlobalExceptionMiddlewareTests
+    {
+        [Fact]
+        public async Task InvokeAsync_ReturnsConflict_WhenNoSeatsAreAvailable()
+        {
+            // Arrange
+            RequestDelegate next = _ => throw new NoAvailableSeatsException();
+            GlobalExceptionMiddleware middleware = new GlobalExceptionMiddleware(
+                next,
+                NullLogger<GlobalExceptionMiddleware>.Instance);
+            DefaultHttpContext context = new DefaultHttpContext();
+
+            // Act
+            await middleware.InvokeAsync(context);
+
+            // Assert
+            Assert.Equal(StatusCodes.Status409Conflict, context.Response.StatusCode);
+        }
+    }
+}

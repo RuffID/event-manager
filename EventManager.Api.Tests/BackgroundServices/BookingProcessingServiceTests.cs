@@ -1,4 +1,5 @@
 using EventManager.Api.BackgroundServices;
+using EventManager.Api.Models;
 using EventManager.Api.Repositories;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -10,29 +11,47 @@ namespace EventManager.Api.Tests.BackgroundServices
         [Fact]
         public async Task StopAsync_CompletesExecution_WhenServiceIsCancelled()
         {
+            // Arrange
             InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
+            InMemoryEventRepository eventRepository = new InMemoryEventRepository();
+            Guid eventId = eventRepository.Events.Keys.First();
+            Booking booking = new Booking(eventId);
+            bookingRepository.Bookings.TryAdd(booking.Id, booking);
+            CancellableBookingProcessingDelay processingDelay =
+                new CancellableBookingProcessingDelay();
             BookingProcessor bookingProcessor = new BookingProcessor(
                 bookingRepository,
-                new ImmediateBookingProcessingDelay(),
+                eventRepository,
+                processingDelay,
                 NullLogger<BookingProcessor>.Instance);
             using BookingProcessingService service = new BookingProcessingService(
                 bookingProcessor,
                 NullLogger<BookingProcessingService>.Instance);
+            using CancellationTokenSource cancellationTokenSource =
+                new CancellationTokenSource(TimeSpan.FromSeconds(2));
 
+            // Act
             await service.StartAsync(CancellationToken.None);
+            await processingDelay.Started.WaitAsync(cancellationTokenSource.Token);
             await service.StopAsync(CancellationToken.None);
 
+            // Assert
             Task? executeTask = service.ExecuteTask;
             Assert.NotNull(executeTask);
             Assert.True(executeTask.IsCompletedSuccessfully);
         }
 
-        private class ImmediateBookingProcessingDelay : IBookingProcessingDelay
+        private class CancellableBookingProcessingDelay : IBookingProcessingDelay
         {
-            public Task WaitAsync(CancellationToken cancellationToken)
+            private readonly TaskCompletionSource<bool> _started =
+                new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public Task Started => _started.Task;
+
+            public async Task WaitAsync(CancellationToken cancellationToken)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                return Task.CompletedTask;
+                _started.TrySetResult(true);
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
             }
         }
     }

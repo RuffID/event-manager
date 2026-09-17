@@ -1,3 +1,4 @@
+using EventManager.Api.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EventManager.Api.Middlewares
@@ -17,6 +18,23 @@ namespace EventManager.Api.Middlewares
             {
                 await next(context);
             }
+            catch (NoAvailableSeatsException exception)
+            {
+                logger.LogWarning(
+                    exception,
+                    "Конфликт бронирования {Method} {Path}",
+                    context.Request.Method,
+                    context.Request.Path);
+
+                if (context.Response.HasStarted)
+                    throw;
+
+                await WriteProblemDetailsAsync(
+                    context,
+                    StatusCodes.Status409Conflict,
+                    "Booking conflict",
+                    exception.Message);
+            }
             catch (Exception exception)
             {
                 logger.LogError(
@@ -28,16 +46,29 @@ namespace EventManager.Api.Middlewares
                 if (context.Response.HasStarted)
                     throw;
 
-                context.Response.Clear();
-                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-
-                await context.Response.WriteAsJsonAsync(new ProblemDetails
-                {
-                    Status = StatusCodes.Status500InternalServerError,
-                    Title = "Не удалось обработать запрос",
-                    Detail = "Внутренняя ошибка сервера."
-                });
+                await WriteProblemDetailsAsync(
+                    context,
+                    StatusCodes.Status500InternalServerError,
+                    "Не удалось обработать запрос",
+                    "Внутренняя ошибка сервера.");
             }
+        }
+
+        private static Task WriteProblemDetailsAsync(
+            HttpContext context,
+            int statusCode,
+            string title,
+            string detail)
+        {
+            context.Response.Clear();
+            context.Response.StatusCode = statusCode;
+
+            return context.Response.WriteAsJsonAsync(new ProblemDetails
+            {
+                Status = statusCode,
+                Title = title,
+                Detail = detail
+            });
         }
     }
 }

@@ -12,6 +12,7 @@ namespace EventManager.Api.Tests.Services
         [Fact]
         public void CreateEvent_ReturnsCreatedEvent_WhenDataIsValid()
         {
+            // Arrange
             InMemoryEventRepository repository = CreateRepository();
             EventService service = new EventService(repository);
             CreateEventDto dto = new CreateEventDto
@@ -19,20 +20,26 @@ namespace EventManager.Api.Tests.Services
                 Title = "Новая встреча",
                 Description = "Описание встречи",
                 StartAt = new DateTime(2026, 11, 10, 18, 0, 0),
-                EndAt = new DateTime(2026, 11, 10, 20, 0, 0)
+                EndAt = new DateTime(2026, 11, 10, 20, 0, 0),
+                TotalSeats = 25
             };
 
+            // Act
             ServiceResult<EventDto> result = service.CreateEvent(dto);
 
+            // Assert
             Assert.True(result.Success);
             EventDto createdEvent = Assert.IsType<EventDto>(result.Data);
             Assert.Equal(dto.Title, createdEvent.Title);
+            Assert.Equal(dto.TotalSeats, createdEvent.TotalSeats);
+            Assert.Equal(dto.TotalSeats, createdEvent.AvailableSeats);
             Assert.True(repository.Events.ContainsKey(createdEvent.Id));
         }
 
         [Fact]
         public void GetEvents_ReturnsAllEvents_WhenFiltersAreNotSpecified()
         {
+            // Arrange
             Event firstEvent = CreateStoredEvent(
                 "Первая встреча",
                 new DateTime(2026, 11, 1, 10, 0, 0),
@@ -46,8 +53,10 @@ namespace EventManager.Api.Tests.Services
             InMemoryEventRepository repository = CreateRepository(firstEvent, secondEvent);
             EventService service = new EventService(repository);
 
+            // Act
             PaginatedResult result = service.GetEvents();
 
+            // Assert
             Assert.Equal(2, result.TotalCount);
             Assert.Equal(2, result.Events.Count);
             Assert.Contains(result.Events, item => item.Id == firstEvent.Id);
@@ -57,6 +66,7 @@ namespace EventManager.Api.Tests.Services
         [Fact]
         public void GetEventById_ReturnsEvent_WhenEventExists()
         {
+            // Arrange
             Event existingEvent = CreateStoredEvent(
                 "Существующая встреча",
                 new DateTime(2026, 11, 3, 10, 0, 0),
@@ -65,8 +75,10 @@ namespace EventManager.Api.Tests.Services
             InMemoryEventRepository repository = CreateRepository(existingEvent);
             EventService service = new EventService(repository);
 
+            // Act
             ServiceResult<EventDto> result = service.GetEventById(existingEvent.Id);
 
+            // Assert
             Assert.True(result.Success);
             EventDto foundEvent = Assert.IsType<EventDto>(result.Data);
             Assert.Equal(existingEvent.Id, foundEvent.Id);
@@ -75,6 +87,7 @@ namespace EventManager.Api.Tests.Services
         [Fact]
         public void UpdateEvent_ReturnsUpdatedEvent_WhenEventExists()
         {
+            // Arrange
             Event existingEvent = CreateStoredEvent(
                 "Старое название",
                 new DateTime(2026, 11, 4, 10, 0, 0),
@@ -90,8 +103,10 @@ namespace EventManager.Api.Tests.Services
                 EndAt = new DateTime(2026, 11, 4, 15, 0, 0)
             };
 
+            // Act
             ServiceResult<EventDto> result = service.UpdateEvent(existingEvent.Id, dto);
 
+            // Assert
             Assert.True(result.Success);
             EventDto updatedEvent = Assert.IsType<EventDto>(result.Data);
             Assert.Equal(dto.Title, updatedEvent.Title);
@@ -102,6 +117,7 @@ namespace EventManager.Api.Tests.Services
         [Fact]
         public void DeleteEvent_RemovesEvent_WhenEventExists()
         {
+            // Arrange
             Event existingEvent = CreateStoredEvent(
                 "Встреча для удаления",
                 new DateTime(2026, 11, 5, 10, 0, 0),
@@ -110,8 +126,10 @@ namespace EventManager.Api.Tests.Services
             InMemoryEventRepository repository = CreateRepository(existingEvent);
             EventService service = new EventService(repository);
 
+            // Act
             ServiceResult result = service.DeleteEvent(existingEvent.Id);
 
+            // Assert
             Assert.True(result.Success);
             Assert.False(repository.Events.ContainsKey(existingEvent.Id));
         }
@@ -119,6 +137,7 @@ namespace EventManager.Api.Tests.Services
         [Fact]
         public void GetEvents_ReturnsMatchingEvents_WhenTitleFilterIsSpecified()
         {
+            // Arrange
             Event matchingEvent = CreateStoredEvent(
                 "C# Meetup",
                 new DateTime(2026, 11, 6, 10, 0, 0),
@@ -131,8 +150,10 @@ namespace EventManager.Api.Tests.Services
 
             EventService service = new EventService(CreateRepository(matchingEvent, otherEvent));
 
+            // Act
             PaginatedResult result = service.GetEvents(title: "c# meet");
 
+            // Assert
             EventDto foundEvent = Assert.Single(result.Events);
             Assert.Equal(matchingEvent.Id, foundEvent.Id);
         }
@@ -140,6 +161,7 @@ namespace EventManager.Api.Tests.Services
         [Fact]
         public void GetEvents_ReturnsEventsInsideRange_WhenDateFiltersAreSpecified()
         {
+            // Arrange
             Event matchingEvent = CreateStoredEvent(
                 "Встреча в диапазоне",
                 new DateTime(2026, 12, 10, 10, 0, 0),
@@ -158,10 +180,12 @@ namespace EventManager.Api.Tests.Services
             EventService service = new EventService(
                 CreateRepository(matchingEvent, earlyEvent, lateEvent));
 
+            // Act
             PaginatedResult result = service.GetEvents(
                 from: new DateTime(2026, 12, 5),
                 to: new DateTime(2026, 12, 31, 23, 59, 59));
 
+            // Assert
             EventDto foundEvent = Assert.Single(result.Events);
             Assert.Equal(matchingEvent.Id, foundEvent.Id);
         }
@@ -169,6 +193,7 @@ namespace EventManager.Api.Tests.Services
         [Fact]
         public void GetEvents_ReturnsRequestedPage_WhenPaginationIsSpecified()
         {
+            // Arrange
             Event firstEvent = CreateStoredEvent(
                 "Первая встреча",
                 new DateTime(2027, 1, 1, 10, 0, 0),
@@ -201,8 +226,10 @@ namespace EventManager.Api.Tests.Services
                 fourthEvent,
                 fifthEvent));
 
+            // Act
             PaginatedResult result = service.GetEvents(page: 2, pageSize: 2);
 
+            // Assert
             Assert.Equal(5, result.TotalCount);
             Assert.Equal(2, result.Page);
             Assert.Equal(2, result.PageSize);
@@ -220,17 +247,21 @@ namespace EventManager.Api.Tests.Services
             int pageSize,
             string parameterName)
         {
+            // Arrange
             EventService service = new EventService(CreateRepository());
 
+            // Act
             ArgumentOutOfRangeException exception = Assert.Throws<ArgumentOutOfRangeException>(
                 () => service.GetEvents(page: page, pageSize: pageSize));
 
+            // Assert
             Assert.Equal(parameterName, exception.ParamName);
         }
 
         [Fact]
         public void GetEvents_ReturnsMatchingEvents_WhenFiltersAreCombined()
         {
+            // Arrange
             Event matchingEvent = CreateStoredEvent(
                 "C# Workshop",
                 new DateTime(2027, 2, 10, 10, 0, 0),
@@ -257,11 +288,13 @@ namespace EventManager.Api.Tests.Services
                 earlyEvent,
                 lateEvent));
 
+            // Act
             PaginatedResult result = service.GetEvents(
                 title: "c#",
                 from: new DateTime(2027, 2, 5),
                 to: new DateTime(2027, 2, 28, 23, 59, 59));
 
+            // Assert
             EventDto foundEvent = Assert.Single(result.Events);
             Assert.Equal(matchingEvent.Id, foundEvent.Id);
         }
@@ -269,6 +302,7 @@ namespace EventManager.Api.Tests.Services
         [Fact]
         public void GetEvents_ReturnsAllEvents_WhenTitleFilterContainsOnlyWhitespace()
         {
+            // Arrange
             Event firstEvent = CreateStoredEvent(
                 "Первая встреча",
                 new DateTime(2027, 2, 1, 10, 0, 0),
@@ -281,8 +315,10 @@ namespace EventManager.Api.Tests.Services
 
             EventService service = new EventService(CreateRepository(firstEvent, secondEvent));
 
+            // Act
             PaginatedResult result = service.GetEvents(title: "   ");
 
+            // Assert
             Assert.Equal(2, result.TotalCount);
             Assert.Equal(2, result.Events.Count);
         }
@@ -290,13 +326,16 @@ namespace EventManager.Api.Tests.Services
         [Fact]
         public void GetEvents_IncludesEventsOnDateFilterBoundaries()
         {
+            // Arrange
             DateTime from = new DateTime(2027, 2, 10, 10, 0, 0);
             DateTime to = new DateTime(2027, 2, 10, 12, 0, 0);
             Event boundaryEvent = CreateStoredEvent("Граничная встреча", from, to);
             EventService service = new EventService(CreateRepository(boundaryEvent));
 
+            // Act
             PaginatedResult result = service.GetEvents(from: from, to: to);
 
+            // Assert
             EventDto foundEvent = Assert.Single(result.Events);
             Assert.Equal(boundaryEvent.Id, foundEvent.Id);
         }
@@ -304,10 +343,13 @@ namespace EventManager.Api.Tests.Services
         [Fact]
         public void GetEventById_ReturnsNotFoundError_WhenEventDoesNotExist()
         {
+            // Arrange
             EventService service = new EventService(CreateRepository());
 
+            // Act
             ServiceResult<EventDto> result = service.GetEventById(Guid.NewGuid());
 
+            // Assert
             Assert.False(result.Success);
             ServiceError error = Assert.IsType<ServiceError>(result.Error);
             Assert.Equal(ServiceErrorType.NotFound, error.Type);
@@ -316,6 +358,7 @@ namespace EventManager.Api.Tests.Services
         [Fact]
         public void UpdateEvent_ReturnsNotFoundError_WhenEventDoesNotExist()
         {
+            // Arrange
             EventService service = new EventService(CreateRepository());
             UpdateEventDto dto = new UpdateEventDto
             {
@@ -324,8 +367,10 @@ namespace EventManager.Api.Tests.Services
                 EndAt = new DateTime(2027, 3, 1, 12, 0, 0)
             };
 
+            // Act
             ServiceResult<EventDto> result = service.UpdateEvent(Guid.NewGuid(), dto);
 
+            // Assert
             Assert.False(result.Success);
             ServiceError error = Assert.IsType<ServiceError>(result.Error);
             Assert.Equal(ServiceErrorType.NotFound, error.Type);
@@ -334,10 +379,13 @@ namespace EventManager.Api.Tests.Services
         [Fact]
         public void DeleteEvent_ReturnsNotFoundError_WhenEventDoesNotExist()
         {
+            // Arrange
             EventService service = new EventService(CreateRepository());
 
+            // Act
             ServiceResult result = service.DeleteEvent(Guid.NewGuid());
 
+            // Assert
             Assert.False(result.Success);
             ServiceError error = Assert.IsType<ServiceError>(result.Error);
             Assert.Equal(ServiceErrorType.NotFound, error.Type);
@@ -346,6 +394,7 @@ namespace EventManager.Api.Tests.Services
         [Fact]
         public void CreateEvent_ReturnsValidationError_WhenDataIsInvalid()
         {
+            // Arrange
             EventService service = new EventService(CreateRepository());
             CreateEventDto dto = new CreateEventDto
             {
@@ -354,16 +403,73 @@ namespace EventManager.Api.Tests.Services
                 EndAt = new DateTime(2027, 3, 2, 12, 0, 0)
             };
 
+            // Act
             ServiceResult<EventDto> result = service.CreateEvent(dto);
 
+            // Assert
             Assert.False(result.Success);
             ServiceError error = Assert.IsType<ServiceError>(result.Error);
             Assert.Equal(ServiceErrorType.Validation, error.Type);
         }
 
+        [Theory]
+        [InlineData(null)]
+        [InlineData(0)]
+        [InlineData(-1)]
+        public void CreateEvent_ReturnsValidationError_WhenTotalSeatsIsInvalid(int? totalSeats)
+        {
+            // Arrange
+            InMemoryEventRepository repository = CreateRepository();
+            EventService service = new EventService(repository);
+            CreateEventDto dto = new CreateEventDto
+            {
+                Title = "Новая встреча",
+                StartAt = new DateTime(2027, 3, 2, 10, 0, 0),
+                EndAt = new DateTime(2027, 3, 2, 12, 0, 0),
+                TotalSeats = totalSeats
+            };
+
+            // Act
+            ServiceResult<EventDto> result = service.CreateEvent(dto);
+
+            // Assert
+            Assert.False(result.Success);
+            ServiceError error = Assert.IsType<ServiceError>(result.Error);
+            Assert.Equal(ServiceErrorType.Validation, error.Type);
+            Assert.Empty(repository.Events);
+        }
+
+        [Fact]
+        public void UpdateEvent_PreservesSeatCounts_WhenEventExists()
+        {
+            // Arrange
+            Event existingEvent = CreateStoredEvent(
+                "Существующая встреча",
+                new DateTime(2027, 3, 3, 10, 0, 0),
+                new DateTime(2027, 3, 3, 12, 0, 0));
+            Assert.True(existingEvent.TryReserveSeats(3));
+            EventService service = new EventService(CreateRepository(existingEvent));
+            UpdateEventDto dto = new UpdateEventDto
+            {
+                Title = "Обновлённая встреча",
+                StartAt = new DateTime(2027, 3, 3, 13, 0, 0),
+                EndAt = new DateTime(2027, 3, 3, 15, 0, 0)
+            };
+
+            // Act
+            ServiceResult<EventDto> result = service.UpdateEvent(existingEvent.Id, dto);
+
+            // Assert
+            Assert.True(result.Success);
+            EventDto updatedEvent = Assert.IsType<EventDto>(result.Data);
+            Assert.Equal(10, updatedEvent.TotalSeats);
+            Assert.Equal(7, updatedEvent.AvailableSeats);
+        }
+
         [Fact]
         public void UpdateEvent_ReturnsValidationError_WhenEndDateIsBeforeStartDate()
         {
+            // Arrange
             Event existingEvent = CreateStoredEvent(
                 "Существующая встреча",
                 new DateTime(2027, 3, 3, 10, 0, 0),
@@ -376,8 +482,10 @@ namespace EventManager.Api.Tests.Services
                 EndAt = new DateTime(2027, 3, 3, 13, 0, 0)
             };
 
+            // Act
             ServiceResult<EventDto> result = service.UpdateEvent(existingEvent.Id, dto);
 
+            // Assert
             Assert.False(result.Success);
             ServiceError error = Assert.IsType<ServiceError>(result.Error);
             Assert.Equal(ServiceErrorType.Validation, error.Type);
@@ -399,7 +507,7 @@ namespace EventManager.Api.Tests.Services
 
         private static Event CreateStoredEvent(string title, DateTime startAt, DateTime endAt)
         {
-            return new Event(Guid.NewGuid(), title, null, startAt, endAt);
+            return new Event(Guid.NewGuid(), title, null, startAt, endAt, 10);
         }
     }
 }

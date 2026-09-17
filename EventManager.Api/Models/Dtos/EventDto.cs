@@ -19,5 +19,11 @@ namespace EventManager.Api.Models.Dtos
 
         /// <summary>Получает или задаёт дату и время окончания события.</summary>
         public DateTime EndAt { get; set; }
+
+        /// <summary>Получает или задаёт общее количество мест на событии.</summary>
+        public int TotalSeats { get; set; }
+
+        /// <summary>Получает или задаёт текущее количество свободных мест.</summary>
+        public int AvailableSeats { get; set; }
     }
 }
