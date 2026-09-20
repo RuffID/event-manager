@@ -1,3 +1,4 @@
+using EventManager.Api.Exceptions;
 using EventManager.Api.Mappers;
 using EventManager.Api.Models;
 using EventManager.Api.Models.Dtos;
@@ -18,26 +19,32 @@ namespace EventManager.Api.Services
         /// <inheritdoc />
         public Task<ServiceResult<BookingInfo>> CreateBookingAsync(Guid eventId)
         {
-            if (!eventRepository.Events.ContainsKey(eventId))
+            ServiceResult<BookingInfo> result = eventRepository.ExecuteSynchronized(() =>
             {
-                return Task.FromResult(
-                    ServiceResult<BookingInfo>.Fail(
+                if (!eventRepository.Events.TryGetValue(eventId, out Event? @event))
+                {
+                    return ServiceResult<BookingInfo>.Fail(
                         ServiceErrorType.NotFound,
-                        "Event not found."));
-            }
+                        "Event not found.");
+                }
 
-            Booking booking = new Booking(eventId);
+                if (!@event.TryReserveSeats())
+                    throw new NoAvailableSeatsException();
 
-            if (bookingRepository.Bookings.TryAdd(booking.Id, booking))
-            {
-                return Task.FromResult(
-                    ServiceResult<BookingInfo>.Succeed(booking.ToInfo()));
-            }
+                Booking booking = new Booking(eventId);
 
-            return Task.FromResult(
-                ServiceResult<BookingInfo>.Fail(
+                if (bookingRepository.Bookings.TryAdd(booking.Id, booking))
+                {
+                    return ServiceResult<BookingInfo>.Succeed(booking.ToInfo());
+                }
+
+                @event.ReleaseSeats();
+                return ServiceResult<BookingInfo>.Fail(
                     ServiceErrorType.Internal,
-                    "Failed to create booking."));
+                    "Failed to create booking.");
+            });
+
+            return Task.FromResult(result);
         }
 
         /// <inheritdoc />

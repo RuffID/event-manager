@@ -85,10 +85,12 @@ namespace EventManager.Api.Controllers
         /// <param name="id">Идентификатор события.</param>
         /// <response code="202">Бронь создана и ожидает обработки.</response>
         /// <response code="404">Событие с указанным идентификатором не найдено.</response>
+        /// <response code="409">На событии нет свободных мест.</response>
         /// <response code="500">Не удалось сохранить бронь.</response>
         [HttpPost("{id}/book")]
         [ProducesResponseType(typeof(BookingInfo), StatusCodes.Status202Accepted)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CreateBooking(Guid id)
         {

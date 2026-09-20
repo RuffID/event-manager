@@ -15,7 +15,7 @@ namespace EventManager.Api.Extensions
         public static IServiceCollection AddServices(this IServiceCollection services)
         {
             services.AddScoped<IEventService, EventService>();
-            services.AddScoped<IBookingService, BookingService>();
+            services.AddSingleton<IBookingService, BookingService>();
             services.AddSingleton<InMemoryEventRepository>();
             services.AddSingleton<InMemoryBookingRepository>();
             services.AddSingleton<IBookingProcessingDelay, BookingProcessingDelay>();
