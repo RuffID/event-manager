@@ -2,23 +2,26 @@ using EventManager.Api.Exceptions;
 using EventManager.Api.Models;
 using EventManager.Api.Models.Dtos;
 using EventManager.Api.Models.Results;
-using EventManager.Api.Repositories;
+using EventManager.Api.DataAccess;
 using EventManager.Api.Services;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using Event = EventManager.Api.Models.Event;
 
 namespace EventManager.Api.Tests.Services
 {
-    public class BookingServiceTests
+    public class BookingServiceTests : IDisposable
     {
+        private readonly ServiceTestContext _database = new();
+
         [Fact]
         public async Task CreateBookingAsync_ReturnsPendingBooking_WhenEventExists()
         {
             // Arrange
             Event existingEvent = CreateEvent();
-            InMemoryEventRepository eventRepository = CreateEventRepository(existingEvent);
-            InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
-            BookingService service = new BookingService(eventRepository, bookingRepository);
+            await _database.SeedAsync(existingEvent);
+            IBookingService service = _database.BookingService;
 
             // Act
             ServiceResult<BookingInfo> result = await service.CreateBookingAsync(existingEvent.Id);
@@ -31,8 +34,9 @@ namespace EventManager.Api.Tests.Services
             Assert.Equal(existingEvent.Id, booking.EventId);
             Assert.Equal(BookingStatus.Pending, booking.Status);
             Assert.Null(booking.ProcessedAt);
-            Assert.True(bookingRepository.Bookings.ContainsKey(booking.Id));
-            Assert.Equal(9, existingEvent.AvailableSeats);
+            _database.Context.ChangeTracker.Clear();
+            Assert.True(await _database.Context.Bookings.AnyAsync(entity => entity.Id == booking.Id, TestContext.Current.CancellationToken));
+            Assert.Equal(9, (await _database.Context.Events.SingleAsync(TestContext.Current.CancellationToken)).AvailableSeats);
         }
 
         [Fact]
@@ -41,9 +45,8 @@ namespace EventManager.Api.Tests.Services
             // Arrange
             const int totalSeats = 3;
             Event existingEvent = CreateEvent(totalSeats);
-            InMemoryEventRepository eventRepository = CreateEventRepository(existingEvent);
-            InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
-            BookingService service = new BookingService(eventRepository, bookingRepository);
+            await _database.SeedAsync(existingEvent);
+            IBookingService service = _database.BookingService;
             List<BookingInfo> bookings = new List<BookingInfo>();
 
             // Act
@@ -59,8 +62,9 @@ namespace EventManager.Api.Tests.Services
             // Assert
             Assert.Equal(totalSeats, bookings.Count);
             Assert.Equal(totalSeats, bookings.Select(booking => booking.Id).Distinct().Count());
-            Assert.Equal(totalSeats, bookingRepository.Bookings.Count);
-            Assert.Equal(0, existingEvent.AvailableSeats);
+            _database.Context.ChangeTracker.Clear();
+            Assert.Equal(totalSeats, await _database.Context.Bookings.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(0, (await _database.Context.Events.SingleAsync(TestContext.Current.CancellationToken)).AvailableSeats);
         }
 
         [Fact]
@@ -68,12 +72,9 @@ namespace EventManager.Api.Tests.Services
         {
             // Arrange
             Event existingEvent = CreateEvent();
-            InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
             Booking storedBooking = new Booking(existingEvent.Id);
-            AddBooking(bookingRepository, storedBooking);
-            BookingService service = new BookingService(
-                CreateEventRepository(existingEvent),
-                bookingRepository);
+            await SeedBookingAsync(existingEvent, storedBooking);
+            IBookingService service = _database.BookingService;
 
             // Act
             ServiceResult<BookingInfo> result =
@@ -95,13 +96,10 @@ namespace EventManager.Api.Tests.Services
         {
             // Arrange
             Event existingEvent = CreateEvent();
-            InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
             Booking storedBooking = new Booking(existingEvent.Id);
-            AddBooking(bookingRepository, storedBooking);
-            BookingService service = new BookingService(
-                CreateEventRepository(existingEvent),
-                bookingRepository);
             storedBooking.Confirm();
+            await SeedBookingAsync(existingEvent, storedBooking);
+            IBookingService service = _database.BookingService;
 
             // Act
             ServiceResult<BookingInfo> result =
@@ -118,13 +116,10 @@ namespace EventManager.Api.Tests.Services
         {
             // Arrange
             Event existingEvent = CreateEvent();
-            InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
             Booking storedBooking = new Booking(existingEvent.Id);
-            AddBooking(bookingRepository, storedBooking);
-            BookingService service = new BookingService(
-                CreateEventRepository(existingEvent),
-                bookingRepository);
             storedBooking.Reject();
+            await SeedBookingAsync(existingEvent, storedBooking);
+            IBookingService service = _database.BookingService;
 
             // Act
             ServiceResult<BookingInfo> result =
@@ -140,10 +135,7 @@ namespace EventManager.Api.Tests.Services
         public async Task CreateBookingAsync_ReturnsNotFound_WhenEventDoesNotExist()
         {
             // Arrange
-            InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
-            BookingService service = new BookingService(
-                CreateEventRepository(),
-                bookingRepository);
+            IBookingService service = _database.BookingService;
 
             // Act
             ServiceResult<BookingInfo> result =
@@ -154,7 +146,7 @@ namespace EventManager.Api.Tests.Services
             Assert.Null(result.Data);
             ServiceError error = Assert.IsType<ServiceError>(result.Error);
             Assert.Equal(ServiceErrorType.NotFound, error.Type);
-            Assert.Empty(bookingRepository.Bookings);
+            Assert.Empty(_database.Context.Bookings);
         }
 
         [Fact]
@@ -162,12 +154,11 @@ namespace EventManager.Api.Tests.Services
         {
             // Arrange
             Event deletedEvent = CreateEvent();
-            InMemoryEventRepository eventRepository = CreateEventRepository(deletedEvent);
-            InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
-            BookingService service = new BookingService(eventRepository, bookingRepository);
-
-            if (!eventRepository.Events.TryRemove(deletedEvent.Id, out _))
-                throw new InvalidOperationException("The test event must exist before deletion.");
+            await _database.SeedAsync(deletedEvent);
+            IBookingService service = _database.BookingService;
+            Event storedEvent = await _database.Context.Events.SingleAsync(TestContext.Current.CancellationToken);
+            _database.Context.Events.Remove(storedEvent);
+            await _database.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             // Act
             ServiceResult<BookingInfo> result =
@@ -178,17 +169,14 @@ namespace EventManager.Api.Tests.Services
             Assert.Null(result.Data);
             ServiceError error = Assert.IsType<ServiceError>(result.Error);
             Assert.Equal(ServiceErrorType.NotFound, error.Type);
-            Assert.Empty(bookingRepository.Bookings);
+            Assert.Empty(_database.Context.Bookings);
         }
 
         [Fact]
         public async Task CreateBookingAsync_ReturnsNotFound_WhenEventIdIsEmpty()
         {
             // Arrange
-            InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
-            BookingService service = new BookingService(
-                CreateEventRepository(),
-                bookingRepository);
+            IBookingService service = _database.BookingService;
 
             // Act
             ServiceResult<BookingInfo> result =
@@ -198,7 +186,7 @@ namespace EventManager.Api.Tests.Services
             Assert.False(result.Success);
             ServiceError error = Assert.IsType<ServiceError>(result.Error);
             Assert.Equal(ServiceErrorType.NotFound, error.Type);
-            Assert.Empty(bookingRepository.Bookings);
+            Assert.Empty(_database.Context.Bookings);
         }
 
         [Fact]
@@ -206,9 +194,8 @@ namespace EventManager.Api.Tests.Services
         {
             // Arrange
             Event existingEvent = CreateEvent(totalSeats: 1);
-            InMemoryEventRepository eventRepository = CreateEventRepository(existingEvent);
-            InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
-            BookingService service = new BookingService(eventRepository, bookingRepository);
+            await _database.SeedAsync(existingEvent);
+            IBookingService service = _database.BookingService;
             await service.CreateBookingAsync(existingEvent.Id);
 
             // Act
@@ -218,8 +205,9 @@ namespace EventManager.Api.Tests.Services
             NoAvailableSeatsException exception =
                 await Assert.ThrowsAsync<NoAvailableSeatsException>(action);
             Assert.Equal("No available seats for this event", exception.Message);
-            Assert.Single(bookingRepository.Bookings);
-            Assert.Equal(0, existingEvent.AvailableSeats);
+            _database.Context.ChangeTracker.Clear();
+            Assert.Single(_database.Context.Bookings);
+            Assert.Equal(0, (await _database.Context.Events.SingleAsync(TestContext.Current.CancellationToken)).AvailableSeats);
         }
 
         [Fact]
@@ -229,13 +217,15 @@ namespace EventManager.Api.Tests.Services
             const int totalSeats = 5;
             const int requestCount = 20;
             Event existingEvent = CreateEvent(totalSeats);
-            InMemoryEventRepository eventRepository = CreateEventRepository(existingEvent);
-            InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
-            BookingService service = new BookingService(eventRepository, bookingRepository);
+            await _database.SeedAsync(existingEvent);
 
+            // Act
             Task<object>[] requests = Enumerable.Range(0, requestCount)
                 .Select(_ => Task.Run(async () =>
                 {
+                    using IServiceScope scope = _database.ServiceProvider.CreateScope();
+                    IBookingService service = scope.ServiceProvider.GetRequiredService<IBookingService>();
+
                     try
                     {
                         return (object)await service.CreateBookingAsync(existingEvent.Id);
@@ -247,7 +237,6 @@ namespace EventManager.Api.Tests.Services
                 }))
                 .ToArray();
 
-            // Act
             object[] outcomes = await Task.WhenAll(requests);
 
             // Assert
@@ -264,8 +253,8 @@ namespace EventManager.Api.Tests.Services
 
             Assert.Equal(totalSeats, successfulResults.Length);
             Assert.Equal(requestCount - totalSeats, conflicts.Length);
-            Assert.Equal(totalSeats, bookingRepository.Bookings.Count);
-            Assert.Equal(0, existingEvent.AvailableSeats);
+            Assert.Equal(totalSeats, await _database.Context.Bookings.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(0, (await _database.Context.Events.SingleAsync(TestContext.Current.CancellationToken)).AvailableSeats);
             Assert.Equal(bookingIds.Length, bookingIds.Distinct().Count());
         }
 
@@ -275,15 +264,18 @@ namespace EventManager.Api.Tests.Services
             // Arrange
             const int totalSeats = 10;
             Event existingEvent = CreateEvent(totalSeats);
-            InMemoryEventRepository eventRepository = CreateEventRepository(existingEvent);
-            InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
-            BookingService service = new BookingService(eventRepository, bookingRepository);
-
-            Task<ServiceResult<BookingInfo>>[] requests = Enumerable.Range(0, totalSeats)
-                .Select(_ => Task.Run(() => service.CreateBookingAsync(existingEvent.Id)))
-                .ToArray();
+            await _database.SeedAsync(existingEvent);
 
             // Act
+            Task<ServiceResult<BookingInfo>>[] requests = Enumerable.Range(0, totalSeats)
+                .Select(_ => Task.Run(async () =>
+                {
+                    using IServiceScope scope = _database.ServiceProvider.CreateScope();
+                    IBookingService service = scope.ServiceProvider.GetRequiredService<IBookingService>();
+                    return await service.CreateBookingAsync(existingEvent.Id);
+                }))
+                .ToArray();
+
             ServiceResult<BookingInfo>[] results = await Task.WhenAll(requests);
 
             // Assert
@@ -293,8 +285,8 @@ namespace EventManager.Api.Tests.Services
                 .ToArray();
 
             Assert.Equal(totalSeats, bookingIds.Distinct().Count());
-            Assert.Equal(totalSeats, bookingRepository.Bookings.Count);
-            Assert.Equal(0, existingEvent.AvailableSeats);
+            Assert.Equal(totalSeats, await _database.Context.Bookings.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(0, (await _database.Context.Events.SingleAsync(TestContext.Current.CancellationToken)).AvailableSeats);
         }
 
         [Fact]
@@ -304,12 +296,7 @@ namespace EventManager.Api.Tests.Services
             const int totalSeats = 5;
             const int requestCount = 10;
             Event existingEvent = CreateEvent(totalSeats);
-            InMemoryEventRepository eventRepository = CreateEventRepository(existingEvent);
-            InMemoryBookingRepository bookingRepository = new InMemoryBookingRepository();
-            BookingService bookingService = new BookingService(
-                eventRepository,
-                bookingRepository);
-            EventService eventService = new EventService(eventRepository);
+            await _database.SeedAsync(existingEvent);
             UpdateEventDto dto = new UpdateEventDto
             {
                 Title = "Обновлённое тестовое событие",
@@ -322,12 +309,16 @@ namespace EventManager.Api.Tests.Services
             Task<ServiceResult<EventDto>> updateTask = Task.Run(async () =>
             {
                 await start.Task;
-                return eventService.UpdateEvent(existingEvent.Id, dto);
+                using IServiceScope scope = _database.ServiceProvider.CreateScope();
+                IEventService eventService = scope.ServiceProvider.GetRequiredService<IEventService>();
+                return await eventService.UpdateEventAsync(existingEvent.Id, dto);
             });
             Task<object>[] bookingTasks = Enumerable.Range(0, requestCount)
                 .Select(_ => Task.Run(async () =>
                 {
                     await start.Task;
+                    using IServiceScope scope = _database.ServiceProvider.CreateScope();
+                    IBookingService bookingService = scope.ServiceProvider.GetRequiredService<IBookingService>();
 
                     try
                     {
@@ -349,21 +340,20 @@ namespace EventManager.Api.Tests.Services
             int successfulBookingCount = bookingOutcomes
                 .OfType<ServiceResult<BookingInfo>>()
                 .Count(result => result.Success);
-            Event storedEvent = eventRepository.Events[existingEvent.Id];
+            Event storedEvent = await _database.Context.Events.SingleAsync(TestContext.Current.CancellationToken);
 
             Assert.True(updateResult.Success);
-            Assert.True(successfulBookingCount <= totalSeats);
-            Assert.Equal(successfulBookingCount, bookingRepository.Bookings.Count);
+            Assert.Equal(totalSeats, successfulBookingCount);
+            Assert.Equal(successfulBookingCount, await _database.Context.Bookings.CountAsync(TestContext.Current.CancellationToken));
             Assert.Equal(totalSeats - successfulBookingCount, storedEvent.AvailableSeats);
+            Assert.Equal(dto.Title, storedEvent.Title);
         }
 
         [Fact]
         public async Task GetBookingByIdAsync_ReturnsNotFound_WhenBookingDoesNotExist()
         {
             // Arrange
-            BookingService service = new BookingService(
-                CreateEventRepository(),
-                new InMemoryBookingRepository());
+            IBookingService service = _database.BookingService;
 
             // Act
             ServiceResult<BookingInfo> result =
@@ -376,18 +366,34 @@ namespace EventManager.Api.Tests.Services
             Assert.Equal(ServiceErrorType.NotFound, error.Type);
         }
 
-        private static InMemoryEventRepository CreateEventRepository(params Event[] events)
+        [Fact]
+        public async Task CreateBookingAsync_UsesCurrentSeatCount_WhenAnotherScopeAlreadyLoadedEvent()
         {
-            InMemoryEventRepository repository = new InMemoryEventRepository();
-            repository.Events.Clear();
+            // Arrange
+            Event existingEvent = CreateEvent(totalSeats: 1);
+            await _database.SeedAsync(existingEvent);
+            using IServiceScope otherScope = _database.ServiceProvider.CreateScope();
+            AppDbContext otherContext = otherScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await otherContext.Events.SingleAsync(TestContext.Current.CancellationToken);
+            IBookingService otherService = otherScope.ServiceProvider.GetRequiredService<IBookingService>();
+            await _database.BookingService.CreateBookingAsync(existingEvent.Id);
 
-            foreach (Event @event in events)
-            {
-                if (!repository.Events.TryAdd(@event.Id, @event))
-                    throw new InvalidOperationException("Event identifiers in a test must be unique.");
-            }
+            // Act
+            Func<Task> action = () => otherService.CreateBookingAsync(existingEvent.Id);
 
-            return repository;
+            // Assert
+            await Assert.ThrowsAsync<NoAvailableSeatsException>(action);
+            _database.Context.ChangeTracker.Clear();
+            Assert.Single(_database.Context.Bookings);
+            Assert.Equal(0, (await _database.Context.Events.SingleAsync(TestContext.Current.CancellationToken)).AvailableSeats);
+        }
+
+        private async Task SeedBookingAsync(Event @event, Booking booking)
+        {
+            await _database.SeedAsync(@event);
+            _database.Context.Bookings.Add(booking);
+            await _database.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+            _database.Context.ChangeTracker.Clear();
         }
 
         private static Event CreateEvent(int totalSeats = 10)
@@ -401,12 +407,6 @@ namespace EventManager.Api.Tests.Services
                 totalSeats);
         }
 
-        private static void AddBooking(
-            InMemoryBookingRepository repository,
-            Booking booking)
-        {
-            if (!repository.Bookings.TryAdd(booking.Id, booking))
-                throw new InvalidOperationException("Booking identifiers in a test must be unique.");
-        }
+        public void Dispose() => _database.Dispose();
     }
 }

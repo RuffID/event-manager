@@ -4,6 +4,7 @@ using EventManager.Api.Models.Dtos;
 using EventManager.Api.Models.Results;
 using EventManager.Api.Repositories;
 using EventManager.Api.Services;
+using EventManager.Api.Tests.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -60,17 +61,19 @@ namespace EventManager.Api.Tests.BackgroundServices
             Assert.Same(booking, bookingRepository.Bookings[booking.Id]);
             Assert.Equal(1, @event.AvailableSeats);
 
+            // Arrange
+            using ServiceTestContext database = new ServiceTestContext();
+            await database.SeedAsync(@event);
+            IBookingService bookingService = database.BookingService;
+
             // Act
-            BookingService bookingService = new BookingService(
-                eventRepository,
-                bookingRepository);
             ServiceResult<BookingInfo> result =
                 await bookingService.CreateBookingAsync(@event.Id);
 
             // Assert
             Assert.True(result.Success);
             Assert.IsType<BookingInfo>(result.Data);
-            Assert.Equal(0, @event.AvailableSeats);
+            Assert.Equal(0, database.Context.Events.Single().AvailableSeats);
         }
 
         [Fact]

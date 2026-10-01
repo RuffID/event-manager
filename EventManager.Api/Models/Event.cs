@@ -160,7 +160,7 @@ namespace EventManager.Api.Models
             }
         }
 
-        /// <summary>Создаёт версию события с обновлёнными общими данными и прежним состоянием мест.</summary>
+        /// <summary>Обновляет общие данные события, сохраняя состояние мест и бронирования.</summary>
         /// <param name="title">Новое название события.</param>
         /// <param name="description">Новое описание события.</param>
         /// <param name="startAt">Новая дата и время начала события.</param>
@@ -174,14 +174,18 @@ namespace EventManager.Api.Models
         {
             lock (_seatLock)
             {
-                return new Event(
-                    Id,
-                    title,
-                    description,
-                    startAt,
-                    endAt,
-                    TotalSeats,
-                    _availableSeats);
+                if (string.IsNullOrWhiteSpace(title))
+                    throw new ArgumentException("Event title must not be empty.", nameof(title));
+
+                if (endAt <= startAt)
+                    throw new ArgumentException("The end date must be later than the start date.", nameof(endAt));
+
+                Title = title.Trim();
+                Description = description;
+                StartAt = startAt;
+                EndAt = endAt;
+
+                return this;
             }
         }
     }

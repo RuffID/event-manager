@@ -15,7 +15,7 @@ namespace EventManager.Api.Services
         /// <param name="page">Номер возвращаемой страницы.</param>
         /// <param name="pageSize">Количество событий на странице.</param>
         /// <returns>Страница событий и сведения о пагинации.</returns>
-        PaginatedResult GetEvents(
+        Task<PaginatedResult> GetEventsAsync(
             string? title = null,
             DateTime? from = null,
             DateTime? to = null,
@@ -25,22 +25,22 @@ namespace EventManager.Api.Services
         /// <summary>Получает событие по идентификатору.</summary>
         /// <param name="id">Идентификатор события.</param>
         /// <returns>Результат с DTO события или ошибкой, если событие не найдено.</returns>
-        ServiceResult<EventDto> GetEventById(Guid id);
+        Task<ServiceResult<EventDto>> GetEventByIdAsync(Guid id);
 
         /// <summary>Создаёт новое событие.</summary>
         /// <param name="event">DTO с данными создаваемого события.</param>
         /// <returns>Результат с DTO созданного события или ошибкой.</returns>
-        ServiceResult<EventDto> CreateEvent(CreateEventDto @event);
+        Task<ServiceResult<EventDto>> CreateEventAsync(CreateEventDto @event);
 
         /// <summary>Полностью обновляет существующее событие.</summary>
         /// <param name="id">Идентификатор обновляемого события.</param>
         /// <param name="dto">DTO с новыми данными события.</param>
         /// <returns>Результат с DTO обновлённого события или ошибкой.</returns>
-        ServiceResult<EventDto> UpdateEvent(Guid id, UpdateEventDto dto);
+        Task<ServiceResult<EventDto>> UpdateEventAsync(Guid id, UpdateEventDto dto);
 
         /// <summary>Удаляет событие по идентификатору.</summary>
         /// <param name="id">Идентификатор удаляемого события.</param>
         /// <returns>Результат удаления или ошибкой, если событие не найдено.</returns>
-        ServiceResult DeleteEvent(Guid id);
+        Task<ServiceResult> DeleteEventAsync(Guid id);
     }
 }

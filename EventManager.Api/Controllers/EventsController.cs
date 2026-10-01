@@ -30,14 +30,14 @@ namespace EventManager.Api.Controllers
         /// <response code="200">Возвращает список событий.</response>
         [HttpGet]
         [ProducesResponseType(typeof(PaginatedResult), StatusCodes.Status200OK)]
-        public IActionResult GetEvents(
+        public async Task<IActionResult> GetEvents(
             [FromQuery] string? title = null,
             [FromQuery] DateTime? from = null,
             [FromQuery] DateTime? to = null,
             [FromQuery, Range(1, int.MaxValue)] int page = 1,
             [FromQuery, Range(1, int.MaxValue)] int pageSize = 10)
         {
-            PaginatedResult result = eventService.GetEvents(title, from, to, page, pageSize);
+            PaginatedResult result = await eventService.GetEventsAsync(title, from, to, page, pageSize);
             return Ok(result);
         }
 
@@ -50,9 +50,9 @@ namespace EventManager.Api.Controllers
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(EventDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-        public IActionResult GetEvent(Guid id)
+        public async Task<IActionResult> GetEvent(Guid id)
         {
-            ServiceResult<EventDto> result = eventService.GetEventById(id);
+            ServiceResult<EventDto> result = await eventService.GetEventByIdAsync(id);
             return this.ToActionResult(result, data => Ok(data));
         }
 
@@ -68,9 +68,9 @@ namespace EventManager.Api.Controllers
         [ProducesResponseType(typeof(EventDto), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
-        public IActionResult CreateEvent([FromBody] CreateEventDto dto)
+        public async Task<IActionResult> CreateEvent([FromBody] CreateEventDto dto)
         {
-            ServiceResult<EventDto> result = eventService.CreateEvent(dto);
+            ServiceResult<EventDto> result = await eventService.CreateEventAsync(dto);
             return this.ToActionResult(
                 result,
                 createdEvent => CreatedAtAction(
@@ -118,9 +118,9 @@ namespace EventManager.Api.Controllers
         [ProducesResponseType(typeof(EventDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-        public IActionResult UpdateEvent(Guid id, [FromBody] UpdateEventDto dto)
+        public async Task<IActionResult> UpdateEvent(Guid id, [FromBody] UpdateEventDto dto)
         {
-            ServiceResult<EventDto> result = eventService.UpdateEvent(id, dto);
+            ServiceResult<EventDto> result = await eventService.UpdateEventAsync(id, dto);
             return this.ToActionResult(result, data => Ok(data));
         }
 
@@ -133,9 +133,9 @@ namespace EventManager.Api.Controllers
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-        public IActionResult DeleteEvent(Guid id)
+        public async Task<IActionResult> DeleteEvent(Guid id)
         {
-            ServiceResult result = eventService.DeleteEvent(id);
+            ServiceResult result = await eventService.DeleteEventAsync(id);
             return this.ToActionResult(result, NoContent);
         }
     }

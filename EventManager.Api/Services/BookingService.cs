@@ -3,25 +3,35 @@ using EventManager.Api.Mappers;
 using EventManager.Api.Models;
 using EventManager.Api.Models.Dtos;
 using EventManager.Api.Models.Results;
-using EventManager.Api.Repositories;
+using EventManager.Api.DataAccess;
+using Microsoft.EntityFrameworkCore;
 
 namespace EventManager.Api.Services
 {
     /// <summary>
     /// Реализует операции создания и получения бронирований.
     /// </summary>
-    /// <param name="eventRepository">Хранилище событий в памяти.</param>
-    /// <param name="bookingRepository">Хранилище бронирований в памяти.</param>
-    public class BookingService(
-        InMemoryEventRepository eventRepository,
-        InMemoryBookingRepository bookingRepository) : IBookingService
+    /// <param name="context">Контекст базы данных.</param>
+    public class BookingService(AppDbContext context) : IBookingService
     {
+        private static readonly SemaphoreSlim BookingSemaphore = new(1, 1);
+
         /// <inheritdoc />
-        public Task<ServiceResult<BookingInfo>> CreateBookingAsync(Guid eventId)
+        public async Task<ServiceResult<BookingInfo>> CreateBookingAsync(Guid eventId)
         {
-            ServiceResult<BookingInfo> result = eventRepository.ExecuteSynchronized(() =>
+            await BookingSemaphore.WaitAsync();
+
+            try
             {
-                if (!eventRepository.Events.TryGetValue(eventId, out Event? @event))
+                Event? @event = await context.Events.SingleOrDefaultAsync(entity => entity.Id == eventId);
+
+                if (@event is not null)
+                {
+                    // Обновляет состояние, если событие уже загружалось в текущем scope.
+                    await context.Entry(@event).ReloadAsync();
+                }
+
+                if (@event is null || context.Entry(@event).State == EntityState.Detached)
                 {
                     return ServiceResult<BookingInfo>.Fail(
                         ServiceErrorType.NotFound,
@@ -33,33 +43,31 @@ namespace EventManager.Api.Services
 
                 Booking booking = new Booking(eventId);
 
-                if (bookingRepository.Bookings.TryAdd(booking.Id, booking))
-                {
-                    return ServiceResult<BookingInfo>.Succeed(booking.ToInfo());
-                }
+                context.Bookings.Add(booking);
+                await context.SaveChangesAsync();
 
-                @event.ReleaseSeats();
-                return ServiceResult<BookingInfo>.Fail(
-                    ServiceErrorType.Internal,
-                    "Failed to create booking.");
-            });
-
-            return Task.FromResult(result);
+                return ServiceResult<BookingInfo>.Succeed(booking.ToInfo());
+            }
+            finally
+            {
+                BookingSemaphore.Release();
+            }
         }
 
         /// <inheritdoc />
-        public Task<ServiceResult<BookingInfo>> GetBookingByIdAsync(Guid bookingId)
+        public async Task<ServiceResult<BookingInfo>> GetBookingByIdAsync(Guid bookingId)
         {
-            if (bookingRepository.Bookings.TryGetValue(bookingId, out Booking? booking))
+            Booking? booking = await context.Bookings.AsNoTracking()
+                .SingleOrDefaultAsync(entity => entity.Id == bookingId);
+
+            if (booking is not null)
             {
-                return Task.FromResult(
-                    ServiceResult<BookingInfo>.Succeed(booking.ToInfo()));
+                return ServiceResult<BookingInfo>.Succeed(booking.ToInfo());
             }
 
-            return Task.FromResult(
-                ServiceResult<BookingInfo>.Fail(
-                    ServiceErrorType.NotFound,
-                    "Booking not found."));
+            return ServiceResult<BookingInfo>.Fail(
+                ServiceErrorType.NotFound,
+                "Booking not found.");
         }
     }
 }
