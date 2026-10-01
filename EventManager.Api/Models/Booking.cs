@@ -10,10 +10,13 @@ namespace EventManager.Api.Models
         private DateTime? _processedAt;
 
         /// <summary>Получает уникальный идентификатор брони.</summary>
-        public Guid Id { get; }
+        public Guid Id { get; private set; }
 
         /// <summary>Получает идентификатор забронированного события.</summary>
-        public Guid EventId { get; }
+        public Guid EventId { get; private set; }
+
+        /// <summary>Получает событие бронирования после загрузки навигационного свойства.</summary>
+        public Event Event { get; private set; } = null!;
 
         /// <summary>Получает текущий статус брони.</summary>
         public BookingStatus Status
@@ -28,7 +31,7 @@ namespace EventManager.Api.Models
         }
 
         /// <summary>Получает дату и время создания брони.</summary>
-        public DateTime CreatedAt { get; }
+        public DateTime CreatedAt { get; private set; }
 
         /// <summary>Получает дату и время обработки брони.</summary>
         public DateTime? ProcessedAt
@@ -40,6 +43,11 @@ namespace EventManager.Api.Models
                     return _processedAt;
                 }
             }
+        }
+
+        /// <summary>Создаёт экземпляр для материализации EF Core.</summary>
+        private Booking()
+        {
         }
 
         /// <summary>

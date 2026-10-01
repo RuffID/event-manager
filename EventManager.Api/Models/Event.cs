@@ -8,25 +8,29 @@ namespace EventManager.Api.Models
     public class Event
     {
         private readonly object _seatLock = new();
+        private readonly List<Booking> _bookings = new();
         private int _availableSeats;
 
         /// <summary>Получает уникальный идентификатор события.</summary>
-        public Guid Id { get; }
+        public Guid Id { get; private set; }
 
         /// <summary>Получает название события.</summary>
-        public string Title { get; }
+        public string Title { get; private set; }
 
         /// <summary>Получает описание события.</summary>
-        public string? Description { get; }
+        public string? Description { get; private set; }
 
         /// <summary>Получает дату и время начала события.</summary>
-        public DateTime StartAt { get; }
+        public DateTime StartAt { get; private set; }
 
         /// <summary>Получает дату и время окончания события.</summary>
-        public DateTime EndAt { get; }
+        public DateTime EndAt { get; private set; }
 
         /// <summary>Получает общее количество мест на событии.</summary>
-        public int TotalSeats { get; }
+        public int TotalSeats { get; private set; }
+
+        /// <summary>Получает бронирования события без возможности изменения коллекции.</summary>
+        public IReadOnlyCollection<Booking> Bookings { get; }
 
         /// <summary>Получает текущее количество свободных мест.</summary>
         public int AvailableSeats
@@ -38,6 +42,13 @@ namespace EventManager.Api.Models
                     return _availableSeats;
                 }
             }
+        }
+
+        /// <summary>Создаёт экземпляр для материализации EF Core.</summary>
+        private Event()
+        {
+            Title = null!;
+            Bookings = _bookings.AsReadOnly();
         }
 
         /// <summary>Создаёт событие в корректном состоянии.</summary>
@@ -66,6 +77,7 @@ namespace EventManager.Api.Models
             DateTime endAt,
             int totalSeats,
             int availableSeats)
+            : this()
         {
             if (id == Guid.Empty)
                 throw new ArgumentException("Event identifier must not be empty.", nameof(id));
