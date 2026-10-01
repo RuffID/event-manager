@@ -25,6 +25,7 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 // Внедрение зависимостей для сервисов
+builder.Services.AddDataAccess(builder.Configuration);
 builder.Services.AddServices();
 
 var app = builder.Build();
