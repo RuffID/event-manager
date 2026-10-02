@@ -15,8 +15,8 @@ namespace EventManager.Api.DataAccess.Configurations
             builder.HasKey(entity => entity.Id);
             builder.Property(entity => entity.Id).ValueGeneratedNever();
 
-            builder.Property(entity => entity.Title).IsRequired();
-            builder.Property(entity => entity.Description).IsRequired(false);
+            builder.Property(entity => entity.Title).HasMaxLength(Event.MAX_TITLE_LENGTH).IsRequired();
+            builder.Property(entity => entity.Description).HasMaxLength(Event.MAX_DESCRIPTION_LENGTH).IsRequired(false);
             builder.Property(entity => entity.StartAt).IsRequired();
             builder.Property(entity => entity.EndAt).IsRequired();
             builder.Property(entity => entity.TotalSeats).IsRequired();

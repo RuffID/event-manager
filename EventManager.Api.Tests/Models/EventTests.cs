@@ -89,6 +89,36 @@ namespace EventManager.Api.Tests.Models
             Assert.Equal(5, @event.AvailableSeats);
         }
 
+        [Fact]
+        public void Create_ThrowsValidationException_WhenStartDateIsInPast()
+        {
+            // Arrange
+            DateTime startAt = DateTime.UtcNow.AddDays(-1);
+
+            // Act
+            Action action = () => Event.Create("Событие", null, startAt, startAt.AddHours(2), 10);
+
+            // Assert
+            Assert.Throws<ValidationException>(action);
+        }
+
+        [Fact]
+        public void UpdateDetails_ThrowsValidationException_WhenStartDateIsChangedToPast()
+        {
+            // Arrange
+            Event @event = CreateEvent(10);
+            DateTime originalStartAt = @event.StartAt;
+            DateTime startAt = DateTime.UtcNow.AddDays(-1);
+
+            // Act
+            Action action = () => @event.UpdateDetails("Новое название", null, startAt, startAt.AddHours(2));
+
+            // Assert
+            Assert.Throws<ValidationException>(action);
+            Assert.Equal(originalStartAt, @event.StartAt);
+            Assert.Equal("Тестовое событие", @event.Title);
+        }
+
         private static Event CreateEvent(int totalSeats)
         {
             return Event.Create(

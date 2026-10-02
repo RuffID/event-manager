@@ -15,18 +15,18 @@ namespace EventManager.Api.Services
     public class BookingService(AppDbContext context) : IBookingService
     {
         /// <inheritdoc />
-        public async Task<ServiceResult<BookingInfo>> CreateBookingAsync(Guid eventId)
+        public async Task<ServiceResult<BookingInfo>> CreateBookingAsync(Guid eventId, CancellationToken cancellationToken = default)
         {
-            await BookingSynchronization.SeatSemaphore.WaitAsync();
+            await BookingSynchronization.SeatSemaphore.WaitAsync(cancellationToken);
 
             try
             {
-                Event? @event = await context.Events.SingleOrDefaultAsync(entity => entity.Id == eventId);
+                Event? @event = await context.Events.SingleOrDefaultAsync(entity => entity.Id == eventId, cancellationToken);
 
                 if (@event is not null)
                 {
                     // Обновляет состояние, если событие уже загружалось в текущем scope.
-                    await context.Entry(@event).ReloadAsync();
+                    await context.Entry(@event).ReloadAsync(cancellationToken);
                 }
 
                 if (@event is null || context.Entry(@event).State == EntityState.Detached)
@@ -42,7 +42,7 @@ namespace EventManager.Api.Services
                 Booking booking = new Booking(eventId);
 
                 context.Bookings.Add(booking);
-                await context.SaveChangesAsync();
+                await context.SaveChangesAsync(cancellationToken);
 
                 return ServiceResult<BookingInfo>.Succeed(booking.ToInfo());
             }
@@ -53,10 +53,11 @@ namespace EventManager.Api.Services
         }
 
         /// <inheritdoc />
-        public async Task<ServiceResult<BookingInfo>> GetBookingByIdAsync(Guid bookingId)
+        public async Task<ServiceResult<BookingInfo>> GetBookingByIdAsync(Guid bookingId, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             Booking? booking = await context.Bookings.AsNoTracking()
-                .SingleOrDefaultAsync(entity => entity.Id == bookingId);
+                .SingleOrDefaultAsync(entity => entity.Id == bookingId, cancellationToken);
 
             if (booking is not null)
             {

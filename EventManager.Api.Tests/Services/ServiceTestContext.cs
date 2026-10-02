@@ -4,6 +4,7 @@ using EventManager.Api.Services;
 using EventManager.Api.BackgroundServices;
 using EventManager.Api.Extensions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace EventManager.Api.Tests.Services
@@ -12,11 +13,16 @@ namespace EventManager.Api.Tests.Services
     {
         private readonly IServiceScope _scope;
 
-        public ServiceTestContext(IBookingProcessingDelay? processingDelay = null)
+        public ServiceTestContext(IBookingProcessingDelay? processingDelay = null, IInterceptor? interceptor = null)
         {
             string databaseName = Guid.NewGuid().ToString();
             ServiceCollection services = new ServiceCollection();
-            services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(databaseName));
+            services.AddDbContext<AppDbContext>(options =>
+            {
+                options.UseInMemoryDatabase(databaseName);
+                if (interceptor is not null)
+                    options.AddInterceptors(interceptor);
+            });
             services.AddLogging();
             services.AddServices();
 

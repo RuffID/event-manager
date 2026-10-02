@@ -1,10 +1,12 @@
 using EventManager.Api.BackgroundServices;
+using EventManager.Api.DataAccess;
 using EventManager.Api.Models;
 using EventManager.Api.Models.Dtos;
 using EventManager.Api.Models.Results;
 using EventManager.Api.Services;
 using EventManager.Api.Tests.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Xunit;
 
 namespace EventManager.Api.Tests.BackgroundServices
@@ -58,7 +60,7 @@ namespace EventManager.Api.Tests.BackgroundServices
 
             // Act
             ServiceResult<BookingInfo> result =
-                await bookingService.CreateBookingAsync(@event.Id);
+                await bookingService.CreateBookingAsync(@event.Id, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.True(result.Success);
@@ -206,6 +208,78 @@ namespace EventManager.Api.Tests.BackgroundServices
             Assert.All(await database.Context.Bookings.ToListAsync(TestContext.Current.CancellationToken),
                 booking => Assert.Equal(BookingStatus.Confirmed, booking.Status));
             Assert.Equal(0, (await database.Context.Events.SingleAsync(TestContext.Current.CancellationToken)).AvailableSeats);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task ProcessPendingBookingsAsync_HandlesSaveFailure_AndCanProcessNextBatch(bool failCompensation)
+        {
+            // Arrange
+            Event @event = CreateEvent();
+            Assert.True(@event.TryReserveSeats());
+            Booking booking = new Booking(@event.Id);
+            FailingBookingSaveInterceptor interceptor = new FailingBookingSaveInterceptor(failCompensation);
+            using ServiceTestContext database = new ServiceTestContext(new ImmediateBookingProcessingDelay(), interceptor);
+            await SeedAsync(database, @event, booking);
+
+            // Act
+            await database.BookingProcessor.ProcessPendingBookingsAsync(TestContext.Current.CancellationToken);
+
+            // Assert
+            Booking storedBooking = await database.Context.Bookings.SingleAsync(TestContext.Current.CancellationToken);
+            Assert.Equal(failCompensation ? BookingStatus.Pending : BookingStatus.Rejected, storedBooking.Status);
+            Assert.Equal(failCompensation ? 0 : 1,
+                (await database.Context.Events.SingleAsync(TestContext.Current.CancellationToken)).AvailableSeats);
+            Assert.Equal(failCompensation ? 2 : 1, interceptor.FailureCount);
+
+            // Arrange
+            database.Context.ChangeTracker.Clear();
+
+            // Act
+            await database.BookingProcessor.ProcessPendingBookingsAsync(TestContext.Current.CancellationToken);
+
+            // Assert
+            storedBooking = await database.Context.Bookings.SingleAsync(TestContext.Current.CancellationToken);
+            Assert.Equal(failCompensation ? BookingStatus.Confirmed : BookingStatus.Rejected, storedBooking.Status);
+            Assert.Equal(failCompensation ? 0 : 1,
+                (await database.Context.Events.SingleAsync(TestContext.Current.CancellationToken)).AvailableSeats);
+        }
+
+        private class FailingBookingSaveInterceptor(bool failCompensation) : SaveChangesInterceptor
+        {
+            private bool _confirmationFailed;
+            private bool _compensationFailed;
+
+            public int FailureCount { get; private set; }
+
+            public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+                DbContextEventData eventData,
+                InterceptionResult<int> result,
+                CancellationToken cancellationToken = default)
+            {
+                AppDbContext context = (AppDbContext)eventData.Context!;
+                BookingStatus? status = context.ChangeTracker.Entries<Booking>()
+                    .Where(entry => entry.State == EntityState.Modified)
+                    .Select(entry => (BookingStatus?)entry.Entity.Status)
+                    .FirstOrDefault();
+
+                if (status == BookingStatus.Confirmed && !_confirmationFailed)
+                {
+                    _confirmationFailed = true;
+                    FailureCount++;
+                    throw new DbUpdateException("Confirmation save failed.");
+                }
+
+                if (status == BookingStatus.Rejected && failCompensation && !_compensationFailed)
+                {
+                    _compensationFailed = true;
+                    FailureCount++;
+                    throw new DbUpdateException("Compensation save failed.");
+                }
+
+                return ValueTask.FromResult(result);
+            }
         }
 
         private static async Task SeedAsync(ServiceTestContext database, Event @event, params Booking[] bookings)

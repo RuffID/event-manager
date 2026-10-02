@@ -98,6 +98,9 @@ namespace EventManager.Api.Tests.DataAccess
             IColumn statusColumn = Assert.IsAssignableFrom<IColumn>(bookingsTable.FindColumn(nameof(Booking.Status)));
 
             Assert.Equal(typeof(string), statusColumn.ProviderClrType);
+            Assert.Equal(20, context.Model.FindEntityType(typeof(Booking))!.FindProperty(nameof(Booking.Status))!.GetMaxLength());
+            Assert.Equal(200, context.Model.FindEntityType(typeof(Event))!.FindProperty(nameof(Event.Title))!.GetMaxLength());
+            Assert.Equal(2000, context.Model.FindEntityType(typeof(Event))!.FindProperty(nameof(Event.Description))!.GetMaxLength());
             Assert.False(statusColumn.IsNullable);
             Assert.Same(eventsTable, Assert.Single(bookingsTable.ForeignKeyConstraints).PrincipalTable);
         }

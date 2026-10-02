@@ -57,6 +57,24 @@ namespace EventManager.Api.BackgroundServices
             try
             {
                 await processingDelay.WaitAsync(cancellationToken);
+
+                await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
+                AppDbContext context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                Booking? booking = await context.Bookings
+                    .SingleOrDefaultAsync(entity => entity.Id == bookingId, cancellationToken);
+
+                if (booking is null || booking.Status != BookingStatus.Pending)
+                    return;
+
+                bool eventExists = await context.Events.AnyAsync(entity => entity.Id == booking.EventId, cancellationToken);
+
+                if (!eventExists)
+                    booking.Reject();
+                else
+                    booking.Confirm();
+
+                await context.SaveChangesAsync(cancellationToken);
+                logger.LogInformation("Бронь {BookingId} обработана со статусом {Status}.", bookingId, booking.Status);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -70,27 +88,16 @@ namespace EventManager.Api.BackgroundServices
                     "При обработке брони {BookingId} произошла ошибка.",
                     bookingId);
 
-                await RejectBookingAsync(bookingId);
-                return;
+                try
+                {
+                    await RejectBookingAsync(bookingId);
+                }
+                catch (Exception rejectionException)
+                {
+                    logger.LogError(rejectionException,
+                        "Не удалось отклонить бронь {BookingId} и вернуть место после ошибки.", bookingId);
+                }
             }
-
-            await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
-            AppDbContext context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            Booking? booking = await context.Bookings
-                .SingleOrDefaultAsync(entity => entity.Id == bookingId, cancellationToken);
-
-            if (booking is null || booking.Status != BookingStatus.Pending)
-                return;
-
-            bool eventExists = await context.Events.AnyAsync(entity => entity.Id == booking.EventId, cancellationToken);
-
-            if (!eventExists)
-                booking.Reject();
-            else
-                booking.Confirm();
-
-            await context.SaveChangesAsync(cancellationToken);
-            logger.LogInformation("Бронь {BookingId} обработана со статусом {Status}.", bookingId, booking.Status);
         }
 
         private async Task RejectBookingAsync(Guid bookingId)

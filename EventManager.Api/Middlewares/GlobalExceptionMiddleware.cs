@@ -35,6 +35,10 @@ namespace EventManager.Api.Middlewares
                     "Booking conflict",
                     exception.Message);
             }
+            catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (Exception exception)
             {
                 logger.LogError(

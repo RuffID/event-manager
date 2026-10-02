@@ -29,7 +29,7 @@ namespace EventManager.Api.Tests.Services
             };
 
             // Act
-            ServiceResult<EventDto> result = await service.CreateEventAsync(dto);
+            ServiceResult<EventDto> result = await service.CreateEventAsync(dto, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.True(result.Success);
@@ -59,13 +59,13 @@ namespace EventManager.Api.Tests.Services
             IEventService service = _database.EventService;
 
             // Act
-            PaginatedResult result = await service.GetEventsAsync();
+            PaginatedResult result = await service.GetEventsAsync(cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Equal(2, result.TotalCount);
-            Assert.Equal(2, result.Events.Count);
-            Assert.Contains(result.Events, item => item.Id == firstEvent.Id);
-            Assert.Contains(result.Events, item => item.Id == secondEvent.Id);
+            Assert.Equal(2, result.Items.Count);
+            Assert.Contains(result.Items, item => item.Id == firstEvent.Id);
+            Assert.Contains(result.Items, item => item.Id == secondEvent.Id);
         }
 
         [Fact]
@@ -81,7 +81,7 @@ namespace EventManager.Api.Tests.Services
             IEventService service = _database.EventService;
 
             // Act
-            ServiceResult<EventDto> result = await service.GetEventByIdAsync(existingEvent.Id);
+            ServiceResult<EventDto> result = await service.GetEventByIdAsync(existingEvent.Id, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.True(result.Success);
@@ -109,7 +109,7 @@ namespace EventManager.Api.Tests.Services
             };
 
             // Act
-            ServiceResult<EventDto> result = await service.UpdateEventAsync(existingEvent.Id, dto);
+            ServiceResult<EventDto> result = await service.UpdateEventAsync(existingEvent.Id, dto, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.True(result.Success);
@@ -134,7 +134,7 @@ namespace EventManager.Api.Tests.Services
             IEventService service = _database.EventService;
 
             // Act
-            ServiceResult result = await service.DeleteEventAsync(existingEvent.Id);
+            ServiceResult result = await service.DeleteEventAsync(existingEvent.Id, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.True(result.Success);
@@ -160,10 +160,10 @@ namespace EventManager.Api.Tests.Services
             IEventService service = _database.EventService;
 
             // Act
-            PaginatedResult result = await service.GetEventsAsync(title: "c# meet");
+            PaginatedResult result = await service.GetEventsAsync(title: "c# meet", cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
-            EventDto foundEvent = Assert.Single(result.Events);
+            EventDto foundEvent = Assert.Single(result.Items);
             Assert.Equal(matchingEvent.Id, foundEvent.Id);
         }
 
@@ -192,10 +192,10 @@ namespace EventManager.Api.Tests.Services
             // Act
             PaginatedResult result = await service.GetEventsAsync(
                 from: new DateTime(2026, 12, 5),
-                to: new DateTime(2026, 12, 31, 23, 59, 59));
+                to: new DateTime(2026, 12, 31, 23, 59, 59), cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
-            EventDto foundEvent = Assert.Single(result.Events);
+            EventDto foundEvent = Assert.Single(result.Items);
             Assert.Equal(matchingEvent.Id, foundEvent.Id);
         }
 
@@ -237,14 +237,15 @@ namespace EventManager.Api.Tests.Services
             IEventService service = _database.EventService;
 
             // Act
-            PaginatedResult result = await service.GetEventsAsync(page: 2, pageSize: 2);
+            PaginatedResult result = await service.GetEventsAsync(page: 2, pageSize: 2, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Equal(5, result.TotalCount);
+            Assert.Equal(3, result.TotalPages);
             Assert.Equal(2, result.Page);
             Assert.Equal(2, result.PageSize);
             Guid[] expectedIds = [thirdEvent.Id, fourthEvent.Id];
-            Assert.Equal(expectedIds, result.Events.Select(item => item.Id));
+            Assert.Equal(expectedIds, result.Items.Select(item => item.Id));
         }
 
         [Theory]
@@ -261,7 +262,7 @@ namespace EventManager.Api.Tests.Services
             IEventService service = _database.EventService;
 
             // Act
-            Func<Task> action = () => service.GetEventsAsync(page: page, pageSize: pageSize);
+            Func<Task> action = () => service.GetEventsAsync(page: page, pageSize: pageSize, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             ArgumentOutOfRangeException exception = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(action);
@@ -303,10 +304,10 @@ namespace EventManager.Api.Tests.Services
             PaginatedResult result = await service.GetEventsAsync(
                 title: "c#",
                 from: new DateTime(2027, 2, 5),
-                to: new DateTime(2027, 2, 28, 23, 59, 59));
+                to: new DateTime(2027, 2, 28, 23, 59, 59), cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
-            EventDto foundEvent = Assert.Single(result.Events);
+            EventDto foundEvent = Assert.Single(result.Items);
             Assert.Equal(matchingEvent.Id, foundEvent.Id);
         }
 
@@ -328,11 +329,11 @@ namespace EventManager.Api.Tests.Services
             IEventService service = _database.EventService;
 
             // Act
-            PaginatedResult result = await service.GetEventsAsync(title: "   ");
+            PaginatedResult result = await service.GetEventsAsync(title: "   ", cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Equal(2, result.TotalCount);
-            Assert.Equal(2, result.Events.Count);
+            Assert.Equal(2, result.Items.Count);
         }
 
         [Fact]
@@ -346,10 +347,10 @@ namespace EventManager.Api.Tests.Services
             IEventService service = _database.EventService;
 
             // Act
-            PaginatedResult result = await service.GetEventsAsync(from: from, to: to);
+            PaginatedResult result = await service.GetEventsAsync(from: from, to: to, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
-            EventDto foundEvent = Assert.Single(result.Events);
+            EventDto foundEvent = Assert.Single(result.Items);
             Assert.Equal(boundaryEvent.Id, foundEvent.Id);
         }
 
@@ -360,7 +361,7 @@ namespace EventManager.Api.Tests.Services
             IEventService service = _database.EventService;
 
             // Act
-            ServiceResult<EventDto> result = await service.GetEventByIdAsync(Guid.NewGuid());
+            ServiceResult<EventDto> result = await service.GetEventByIdAsync(Guid.NewGuid(), cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.False(result.Success);
@@ -381,7 +382,7 @@ namespace EventManager.Api.Tests.Services
             };
 
             // Act
-            ServiceResult<EventDto> result = await service.UpdateEventAsync(Guid.NewGuid(), dto);
+            ServiceResult<EventDto> result = await service.UpdateEventAsync(Guid.NewGuid(), dto, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.False(result.Success);
@@ -396,7 +397,7 @@ namespace EventManager.Api.Tests.Services
             IEventService service = _database.EventService;
 
             // Act
-            ServiceResult result = await service.DeleteEventAsync(Guid.NewGuid());
+            ServiceResult result = await service.DeleteEventAsync(Guid.NewGuid(), cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.False(result.Success);
@@ -417,7 +418,7 @@ namespace EventManager.Api.Tests.Services
             };
 
             // Act
-            ServiceResult<EventDto> result = await service.CreateEventAsync(dto);
+            ServiceResult<EventDto> result = await service.CreateEventAsync(dto, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.False(result.Success);
@@ -443,7 +444,7 @@ namespace EventManager.Api.Tests.Services
             };
 
             // Act
-            ServiceResult<EventDto> result = await service.CreateEventAsync(dto);
+            ServiceResult<EventDto> result = await service.CreateEventAsync(dto, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.False(result.Success);
@@ -471,7 +472,7 @@ namespace EventManager.Api.Tests.Services
             };
 
             // Act
-            ServiceResult<EventDto> result = await service.UpdateEventAsync(existingEvent.Id, dto);
+            ServiceResult<EventDto> result = await service.UpdateEventAsync(existingEvent.Id, dto, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.True(result.Success);
@@ -498,7 +499,7 @@ namespace EventManager.Api.Tests.Services
             };
 
             // Act
-            ServiceResult<EventDto> result = await service.UpdateEventAsync(existingEvent.Id, dto);
+            ServiceResult<EventDto> result = await service.UpdateEventAsync(existingEvent.Id, dto, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.False(result.Success);
@@ -529,7 +530,7 @@ namespace EventManager.Api.Tests.Services
             };
 
             // Act
-            ServiceResult<EventDto> result = await service.UpdateEventAsync(existingEvent.Id, dto);
+            ServiceResult<EventDto> result = await service.UpdateEventAsync(existingEvent.Id, dto, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.True(result.Success);
@@ -540,6 +541,62 @@ namespace EventManager.Api.Tests.Services
             Assert.Equal(dto.Title, storedEvent.Title);
             Assert.Equal(9, storedEvent.AvailableSeats);
             Assert.Equal(booking.Id, Assert.Single(storedEvent.Bookings).Id);
+        }
+
+        [Fact]
+        public async Task CreateEvent_ReturnsValidationError_WhenStartDateIsInPast()
+        {
+            // Arrange
+            DateTime startAt = DateTime.UtcNow.AddDays(-1);
+            CreateEventDto dto = new CreateEventDto
+            {
+                Title = "Событие", StartAt = startAt, EndAt = startAt.AddHours(2), TotalSeats = 10
+            };
+
+            // Act
+            ServiceResult<EventDto> result = await _database.EventService.CreateEventAsync(dto, cancellationToken: TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.False(result.Success);
+            Assert.Equal(ServiceErrorType.Validation, result.Error!.Type);
+            Assert.Empty(_database.Context.Events);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task UpdateEvent_AllowsPastStartDate_OnlyWhenItIsUnchanged(bool changeStartAt)
+        {
+            // Arrange
+            DateTime pastStartAt = DateTime.UtcNow.AddDays(-2);
+            Event @event = Event.Create("Исходное событие", null,
+                DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 10);
+            AppDbContext context = await CreateContextAsync(@event);
+            Event storedEvent = await context.Events.SingleAsync(TestContext.Current.CancellationToken);
+            // Имитирует материализацию события, дата начала которого уже прошла.
+            context.Entry(storedEvent).Property(entity => entity.StartAt).CurrentValue = pastStartAt;
+            context.Entry(storedEvent).Property(entity => entity.EndAt).CurrentValue = pastStartAt.AddHours(2);
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+            context.ChangeTracker.Clear();
+            UpdateEventDto dto = new UpdateEventDto
+            {
+                Title = "Новое название", Description = "Новое описание",
+                StartAt = changeStartAt ? pastStartAt.AddHours(1) : pastStartAt,
+                EndAt = pastStartAt.AddHours(2)
+            };
+
+            // Act
+            ServiceResult<EventDto> result = await _database.EventService.UpdateEventAsync(@event.Id, dto, cancellationToken: TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Equal(!changeStartAt, result.Success);
+            if (changeStartAt)
+                Assert.Equal(ServiceErrorType.Validation, result.Error!.Type);
+            context.ChangeTracker.Clear();
+            Event updatedEvent = await context.Events.SingleAsync(TestContext.Current.CancellationToken);
+            Assert.Equal(changeStartAt ? "Исходное событие" : dto.Title, updatedEvent.Title);
+            Assert.Equal(changeStartAt ? null : dto.Description, updatedEvent.Description);
+            Assert.Equal(pastStartAt, updatedEvent.StartAt);
         }
 
         private async Task<AppDbContext> CreateContextAsync(params Event[] events)

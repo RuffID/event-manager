@@ -24,7 +24,7 @@ namespace EventManager.Api.Tests.Services
             IBookingService service = _database.BookingService;
 
             // Act
-            ServiceResult<BookingInfo> result = await service.CreateBookingAsync(existingEvent.Id);
+            ServiceResult<BookingInfo> result = await service.CreateBookingAsync(existingEvent.Id, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.True(result.Success);
@@ -53,7 +53,7 @@ namespace EventManager.Api.Tests.Services
             foreach (int _ in Enumerable.Range(0, totalSeats))
             {
                 ServiceResult<BookingInfo> result =
-                    await service.CreateBookingAsync(existingEvent.Id);
+                    await service.CreateBookingAsync(existingEvent.Id, cancellationToken: TestContext.Current.CancellationToken);
 
                 Assert.True(result.Success);
                 bookings.Add(Assert.IsType<BookingInfo>(result.Data));
@@ -78,7 +78,7 @@ namespace EventManager.Api.Tests.Services
 
             // Act
             ServiceResult<BookingInfo> result =
-                await service.GetBookingByIdAsync(storedBooking.Id);
+                await service.GetBookingByIdAsync(storedBooking.Id, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.True(result.Success);
@@ -103,7 +103,7 @@ namespace EventManager.Api.Tests.Services
 
             // Act
             ServiceResult<BookingInfo> result =
-                await service.GetBookingByIdAsync(storedBooking.Id);
+                await service.GetBookingByIdAsync(storedBooking.Id, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             BookingInfo booking = Assert.IsType<BookingInfo>(result.Data);
@@ -123,7 +123,7 @@ namespace EventManager.Api.Tests.Services
 
             // Act
             ServiceResult<BookingInfo> result =
-                await service.GetBookingByIdAsync(storedBooking.Id);
+                await service.GetBookingByIdAsync(storedBooking.Id, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             BookingInfo booking = Assert.IsType<BookingInfo>(result.Data);
@@ -139,7 +139,7 @@ namespace EventManager.Api.Tests.Services
 
             // Act
             ServiceResult<BookingInfo> result =
-                await service.CreateBookingAsync(Guid.NewGuid());
+                await service.CreateBookingAsync(Guid.NewGuid(), cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.False(result.Success);
@@ -162,7 +162,7 @@ namespace EventManager.Api.Tests.Services
 
             // Act
             ServiceResult<BookingInfo> result =
-                await service.CreateBookingAsync(deletedEvent.Id);
+                await service.CreateBookingAsync(deletedEvent.Id, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.False(result.Success);
@@ -180,7 +180,7 @@ namespace EventManager.Api.Tests.Services
 
             // Act
             ServiceResult<BookingInfo> result =
-                await service.CreateBookingAsync(Guid.Empty);
+                await service.CreateBookingAsync(Guid.Empty, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.False(result.Success);
@@ -196,10 +196,10 @@ namespace EventManager.Api.Tests.Services
             Event existingEvent = CreateEvent(totalSeats: 1);
             await _database.SeedAsync(existingEvent);
             IBookingService service = _database.BookingService;
-            await service.CreateBookingAsync(existingEvent.Id);
+            await service.CreateBookingAsync(existingEvent.Id, cancellationToken: TestContext.Current.CancellationToken);
 
             // Act
-            Func<Task> action = () => service.CreateBookingAsync(existingEvent.Id);
+            Func<Task> action = () => service.CreateBookingAsync(existingEvent.Id, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             NoAvailableSeatsException exception =
@@ -228,7 +228,7 @@ namespace EventManager.Api.Tests.Services
 
                     try
                     {
-                        return (object)await service.CreateBookingAsync(existingEvent.Id);
+                        return (object)await service.CreateBookingAsync(existingEvent.Id, cancellationToken: TestContext.Current.CancellationToken);
                     }
                     catch (Exception exception)
                     {
@@ -272,7 +272,7 @@ namespace EventManager.Api.Tests.Services
                 {
                     using IServiceScope scope = _database.ServiceProvider.CreateScope();
                     IBookingService service = scope.ServiceProvider.GetRequiredService<IBookingService>();
-                    return await service.CreateBookingAsync(existingEvent.Id);
+                    return await service.CreateBookingAsync(existingEvent.Id, cancellationToken: TestContext.Current.CancellationToken);
                 }))
                 .ToArray();
 
@@ -311,7 +311,7 @@ namespace EventManager.Api.Tests.Services
                 await start.Task;
                 using IServiceScope scope = _database.ServiceProvider.CreateScope();
                 IEventService eventService = scope.ServiceProvider.GetRequiredService<IEventService>();
-                return await eventService.UpdateEventAsync(existingEvent.Id, dto);
+                return await eventService.UpdateEventAsync(existingEvent.Id, dto, cancellationToken: TestContext.Current.CancellationToken);
             });
             Task<object>[] bookingTasks = Enumerable.Range(0, requestCount)
                 .Select(_ => Task.Run(async () =>
@@ -322,7 +322,7 @@ namespace EventManager.Api.Tests.Services
 
                     try
                     {
-                        return (object)await bookingService.CreateBookingAsync(existingEvent.Id);
+                        return (object)await bookingService.CreateBookingAsync(existingEvent.Id, cancellationToken: TestContext.Current.CancellationToken);
                     }
                     catch (NoAvailableSeatsException exception)
                     {
@@ -357,7 +357,7 @@ namespace EventManager.Api.Tests.Services
 
             // Act
             ServiceResult<BookingInfo> result =
-                await service.GetBookingByIdAsync(Guid.NewGuid());
+                await service.GetBookingByIdAsync(Guid.NewGuid(), cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.False(result.Success);
@@ -376,10 +376,10 @@ namespace EventManager.Api.Tests.Services
             AppDbContext otherContext = otherScope.ServiceProvider.GetRequiredService<AppDbContext>();
             await otherContext.Events.SingleAsync(TestContext.Current.CancellationToken);
             IBookingService otherService = otherScope.ServiceProvider.GetRequiredService<IBookingService>();
-            await _database.BookingService.CreateBookingAsync(existingEvent.Id);
+            await _database.BookingService.CreateBookingAsync(existingEvent.Id, cancellationToken: TestContext.Current.CancellationToken);
 
             // Act
-            Func<Task> action = () => otherService.CreateBookingAsync(existingEvent.Id);
+            Func<Task> action = () => otherService.CreateBookingAsync(existingEvent.Id, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             await Assert.ThrowsAsync<NoAvailableSeatsException>(action);

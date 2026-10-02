@@ -21,7 +21,7 @@ namespace EventManager.Api.Tests.BackgroundServices
                 new DateTime(2030, 1, 1, 10, 0, 0, DateTimeKind.Utc),
                 new DateTime(2030, 1, 1, 12, 0, 0, DateTimeKind.Utc), 1);
             await database.SeedAsync(@event);
-            await database.BookingService.CreateBookingAsync(@event.Id);
+            await database.BookingService.CreateBookingAsync(@event.Id, cancellationToken: TestContext.Current.CancellationToken);
             using BookingProcessingService service = new BookingProcessingService(
                 database.ServiceProvider.GetRequiredService<IServiceScopeFactory>(),
                 NullLogger<BookingProcessingService>.Instance);
@@ -41,6 +41,53 @@ namespace EventManager.Api.Tests.BackgroundServices
             Booking storedBooking = await database.Context.Bookings.SingleAsync(TestContext.Current.CancellationToken);
             Assert.Equal(BookingStatus.Pending, storedBooking.Status);
             Assert.Null(storedBooking.ProcessedAt);
+        }
+
+        [Fact]
+        public async Task ExecuteAsync_ContinuesProcessing_WhenBatchScopeCreationFails()
+        {
+            // Arrange
+            CancellableBookingProcessingDelay processingDelay = new CancellableBookingProcessingDelay();
+            using ServiceTestContext database = new ServiceTestContext(processingDelay);
+            Event @event = Event.Create("Событие", null, DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 1);
+            await database.SeedAsync(@event);
+            await database.BookingService.CreateBookingAsync(@event.Id, cancellationToken: TestContext.Current.CancellationToken);
+            FailingOnceScopeFactory scopeFactory = new FailingOnceScopeFactory(
+                database.ServiceProvider.GetRequiredService<IServiceScopeFactory>());
+            using BookingProcessingService service = new BookingProcessingService(
+                scopeFactory, NullLogger<BookingProcessingService>.Instance);
+            using CancellationTokenSource timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+
+            // Act
+            try
+            {
+                await service.StartAsync(CancellationToken.None);
+                await processingDelay.Started.WaitAsync(timeout.Token);
+            }
+            finally
+            {
+                await service.StopAsync(CancellationToken.None);
+            }
+
+            // Assert
+            Assert.True(scopeFactory.CallCount >= 2);
+            Assert.NotNull(service.ExecuteTask);
+            Assert.True(service.ExecuteTask.IsCompletedSuccessfully);
+        }
+
+        private class FailingOnceScopeFactory(IServiceScopeFactory inner) : IServiceScopeFactory
+        {
+            private int _callCount;
+
+            public int CallCount => Volatile.Read(ref _callCount);
+
+            public IServiceScope CreateScope()
+            {
+                if (Interlocked.Increment(ref _callCount) == 1)
+                    throw new InvalidOperationException("Scope creation failed.");
+
+                return inner.CreateScope();
+            }
         }
 
         private class CancellableBookingProcessingDelay : IBookingProcessingDelay

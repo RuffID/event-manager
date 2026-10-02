@@ -9,22 +9,32 @@ namespace EventManager.Api.BackgroundServices
         IServiceScopeFactory scopeFactory,
         ILogger<BookingProcessingService> logger) : BackgroundService
     {
-        private static readonly TimeSpan PollingInterval = TimeSpan.FromSeconds(1);
+        private static readonly TimeSpan PollingInterval = TimeSpan.FromSeconds(5);
 
         /// <inheritdoc />
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            using PeriodicTimer timer = new PeriodicTimer(PollingInterval);
-
             try
             {
-                do
+                while (!stoppingToken.IsCancellationRequested)
                 {
-                    await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
-                    BookingProcessor bookingProcessor = scope.ServiceProvider.GetRequiredService<BookingProcessor>();
-                    await bookingProcessor.ProcessPendingBookingsAsync(stoppingToken);
+                    try
+                    {
+                        await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
+                        BookingProcessor bookingProcessor = scope.ServiceProvider.GetRequiredService<BookingProcessor>();
+                        await bookingProcessor.ProcessPendingBookingsAsync(stoppingToken);
+                    }
+                    catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (Exception exception)
+                    {
+                        logger.LogError(exception, "Ошибка обработки ожидающих бронирований.");
+                    }
+
+                    await Task.Delay(PollingInterval, stoppingToken);
                 }
-                while (await timer.WaitForNextTickAsync(stoppingToken));
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {

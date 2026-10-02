@@ -7,6 +7,12 @@ namespace EventManager.Api.Models
     /// </summary>
     public class Event
     {
+        /// <summary>Максимальная длина названия события.</summary>
+        public const int MAX_TITLE_LENGTH = 200;
+
+        /// <summary>Максимальная длина описания события.</summary>
+        public const int MAX_DESCRIPTION_LENGTH = 2000;
+
         private readonly object _seatLock = new();
         private readonly List<Booking> _bookings = new();
         private int _availableSeats;
@@ -85,8 +91,17 @@ namespace EventManager.Api.Models
             if (string.IsNullOrWhiteSpace(title))
                 throw new ArgumentException("Event title must not be empty.", nameof(title));
 
+            if (title.Length > MAX_TITLE_LENGTH)
+                throw new ValidationException("Event title must not exceed 200 characters.");
+
+            if (description?.Length > MAX_DESCRIPTION_LENGTH)
+                throw new ValidationException("Event description must not exceed 2000 characters.");
+
             if (endAt <= startAt)
                 throw new ArgumentException("The end date must be later than the start date.", nameof(endAt));
+
+            if (startAt < DateTime.UtcNow)
+                throw new ValidationException("Event cannot start in the past.");
 
             if (totalSeats <= 0)
                 throw new ValidationException("The total number of seats must be greater than zero.");
@@ -177,8 +192,17 @@ namespace EventManager.Api.Models
                 if (string.IsNullOrWhiteSpace(title))
                     throw new ArgumentException("Event title must not be empty.", nameof(title));
 
+                if (title.Length > MAX_TITLE_LENGTH)
+                    throw new ValidationException("Event title must not exceed 200 characters.");
+
+                if (description?.Length > MAX_DESCRIPTION_LENGTH)
+                    throw new ValidationException("Event description must not exceed 2000 characters.");
+
                 if (endAt <= startAt)
                     throw new ArgumentException("The end date must be later than the start date.", nameof(endAt));
+
+                if (startAt != StartAt && startAt < DateTime.UtcNow)
+                    throw new ValidationException("Event cannot start in the past.");
 
                 Title = title.Trim();
                 Description = description;

@@ -20,7 +20,7 @@ namespace EventManager.Api.DataAccess.Configurations
                 .HasField("_status")
                 .UsePropertyAccessMode(PropertyAccessMode.Field)
                 .HasConversion<string>()
-                .HasMaxLength(nameof(BookingStatus.Confirmed).Length)
+                .HasMaxLength(20)
                 .IsRequired();
             builder.Property(entity => entity.CreatedAt).IsRequired();
             builder.Property(entity => entity.ProcessedAt)
