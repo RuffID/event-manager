@@ -3,10 +3,10 @@ namespace EventManager.Api.BackgroundServices
     /// <summary>
     /// Периодически обрабатывает созданные бронирования.
     /// </summary>
-    /// <param name="bookingProcessor">Обработчик ожидающих бронирований.</param>
+    /// <param name="scopeFactory">Фабрика областей зависимостей фоновой обработки.</param>
     /// <param name="logger">Сервис журналирования.</param>
     public class BookingProcessingService(
-        BookingProcessor bookingProcessor,
+        IServiceScopeFactory scopeFactory,
         ILogger<BookingProcessingService> logger) : BackgroundService
     {
         private static readonly TimeSpan PollingInterval = TimeSpan.FromSeconds(1);
@@ -20,6 +20,8 @@ namespace EventManager.Api.BackgroundServices
             {
                 do
                 {
+                    await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
+                    BookingProcessor bookingProcessor = scope.ServiceProvider.GetRequiredService<BookingProcessor>();
                     await bookingProcessor.ProcessPendingBookingsAsync(stoppingToken);
                 }
                 while (await timer.WaitForNextTickAsync(stoppingToken));

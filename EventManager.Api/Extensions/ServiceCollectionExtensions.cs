@@ -1,6 +1,5 @@
 using EventManager.Api.BackgroundServices;
 using EventManager.Api.DataAccess;
-using EventManager.Api.Repositories;
 using EventManager.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,15 +28,13 @@ namespace EventManager.Api.Extensions
             return services;
         }
 
-        /// <summary>Регистрирует сервисы и хранилища приложения в контейнере зависимостей.</summary>
+        /// <summary>Регистрирует прикладные сервисы и фоновую обработку бронирований.</summary>
         /// <param name="services">Коллекция сервисов приложения.</param>
         /// <returns>Коллекция сервисов с добавленными регистрациями.</returns>
         public static IServiceCollection AddServices(this IServiceCollection services)
         {
             services.AddScoped<IEventService, EventService>();
             services.AddScoped<IBookingService, BookingService>();
-            services.AddSingleton<InMemoryEventRepository>();
-            services.AddSingleton<InMemoryBookingRepository>();
             services.AddSingleton<IBookingProcessingDelay, BookingProcessingDelay>();
             services.AddSingleton<BookingProcessor>();
             services.AddHostedService<BookingProcessingService>();

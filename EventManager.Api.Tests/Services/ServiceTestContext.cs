@@ -1,6 +1,8 @@
 using EventManager.Api.DataAccess;
 using EventManager.Api.Models;
 using EventManager.Api.Services;
+using EventManager.Api.BackgroundServices;
+using EventManager.Api.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -10,13 +12,16 @@ namespace EventManager.Api.Tests.Services
     {
         private readonly IServiceScope _scope;
 
-        public ServiceTestContext()
+        public ServiceTestContext(IBookingProcessingDelay? processingDelay = null)
         {
             string databaseName = Guid.NewGuid().ToString();
             ServiceCollection services = new ServiceCollection();
             services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(databaseName));
-            services.AddScoped<IEventService, EventService>();
-            services.AddScoped<IBookingService, BookingService>();
+            services.AddLogging();
+            services.AddServices();
+
+            if (processingDelay is not null)
+                services.AddSingleton(processingDelay);
             ServiceProvider = services.BuildServiceProvider(new ServiceProviderOptions
             {
                 ValidateScopes = true,
@@ -32,6 +37,8 @@ namespace EventManager.Api.Tests.Services
         public IEventService EventService => _scope.ServiceProvider.GetRequiredService<IEventService>();
 
         public IBookingService BookingService => _scope.ServiceProvider.GetRequiredService<IBookingService>();
+
+        public BookingProcessor BookingProcessor => ServiceProvider.GetRequiredService<BookingProcessor>();
 
         public async Task SeedAsync(params Event[] events)
         {

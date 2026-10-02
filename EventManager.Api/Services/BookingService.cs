@@ -14,12 +14,10 @@ namespace EventManager.Api.Services
     /// <param name="context">Контекст базы данных.</param>
     public class BookingService(AppDbContext context) : IBookingService
     {
-        private static readonly SemaphoreSlim BookingSemaphore = new(1, 1);
-
         /// <inheritdoc />
         public async Task<ServiceResult<BookingInfo>> CreateBookingAsync(Guid eventId)
         {
-            await BookingSemaphore.WaitAsync();
+            await BookingSynchronization.SeatSemaphore.WaitAsync();
 
             try
             {
@@ -50,7 +48,7 @@ namespace EventManager.Api.Services
             }
             finally
             {
-                BookingSemaphore.Release();
+                BookingSynchronization.SeatSemaphore.Release();
             }
         }
 
