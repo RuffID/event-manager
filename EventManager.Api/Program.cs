@@ -30,6 +30,8 @@ builder.Services.AddServices();
 
 var app = builder.Build();
 
+app.InitializeDatabase();
+
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseSwagger();
