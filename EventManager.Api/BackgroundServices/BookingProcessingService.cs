@@ -3,26 +3,38 @@ namespace EventManager.Api.BackgroundServices
     /// <summary>
     /// Периодически обрабатывает созданные бронирования.
     /// </summary>
-    /// <param name="bookingProcessor">Обработчик ожидающих бронирований.</param>
+    /// <param name="scopeFactory">Фабрика областей зависимостей фоновой обработки.</param>
     /// <param name="logger">Сервис журналирования.</param>
     public class BookingProcessingService(
-        BookingProcessor bookingProcessor,
+        IServiceScopeFactory scopeFactory,
         ILogger<BookingProcessingService> logger) : BackgroundService
     {
-        private static readonly TimeSpan PollingInterval = TimeSpan.FromSeconds(1);
+        private static readonly TimeSpan PollingInterval = TimeSpan.FromSeconds(5);
 
         /// <inheritdoc />
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            using PeriodicTimer timer = new PeriodicTimer(PollingInterval);
-
             try
             {
-                do
+                while (!stoppingToken.IsCancellationRequested)
                 {
-                    await bookingProcessor.ProcessPendingBookingsAsync(stoppingToken);
+                    try
+                    {
+                        await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
+                        BookingProcessor bookingProcessor = scope.ServiceProvider.GetRequiredService<BookingProcessor>();
+                        await bookingProcessor.ProcessPendingBookingsAsync(stoppingToken);
+                    }
+                    catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (Exception exception)
+                    {
+                        logger.LogError(exception, "Ошибка обработки ожидающих бронирований.");
+                    }
+
+                    await Task.Delay(PollingInterval, stoppingToken);
                 }
-                while (await timer.WaitForNextTickAsync(stoppingToken));
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {

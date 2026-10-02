@@ -7,26 +7,36 @@ namespace EventManager.Api.Models
     /// </summary>
     public class Event
     {
+        /// <summary>Максимальная длина названия события.</summary>
+        public const int MAX_TITLE_LENGTH = 200;
+
+        /// <summary>Максимальная длина описания события.</summary>
+        public const int MAX_DESCRIPTION_LENGTH = 2000;
+
         private readonly object _seatLock = new();
+        private readonly List<Booking> _bookings = new();
         private int _availableSeats;
 
         /// <summary>Получает уникальный идентификатор события.</summary>
-        public Guid Id { get; }
+        public Guid Id { get; private set; }
 
         /// <summary>Получает название события.</summary>
-        public string Title { get; }
+        public string Title { get; private set; }
 
         /// <summary>Получает описание события.</summary>
-        public string? Description { get; }
+        public string? Description { get; private set; }
 
         /// <summary>Получает дату и время начала события.</summary>
-        public DateTime StartAt { get; }
+        public DateTime StartAt { get; private set; }
 
         /// <summary>Получает дату и время окончания события.</summary>
-        public DateTime EndAt { get; }
+        public DateTime EndAt { get; private set; }
 
         /// <summary>Получает общее количество мест на событии.</summary>
-        public int TotalSeats { get; }
+        public int TotalSeats { get; private set; }
+
+        /// <summary>Получает бронирования события без возможности изменения коллекции.</summary>
+        public IReadOnlyCollection<Booking> Bookings { get; }
 
         /// <summary>Получает текущее количество свободных мест.</summary>
         public int AvailableSeats
@@ -38,6 +48,13 @@ namespace EventManager.Api.Models
                     return _availableSeats;
                 }
             }
+        }
+
+        /// <summary>Создаёт экземпляр для материализации EF Core.</summary>
+        private Event()
+        {
+            Title = null!;
+            Bookings = _bookings.AsReadOnly();
         }
 
         /// <summary>Создаёт событие в корректном состоянии.</summary>
@@ -66,6 +83,7 @@ namespace EventManager.Api.Models
             DateTime endAt,
             int totalSeats,
             int availableSeats)
+            : this()
         {
             if (id == Guid.Empty)
                 throw new ArgumentException("Event identifier must not be empty.", nameof(id));
@@ -73,8 +91,17 @@ namespace EventManager.Api.Models
             if (string.IsNullOrWhiteSpace(title))
                 throw new ArgumentException("Event title must not be empty.", nameof(title));
 
+            if (title.Length > MAX_TITLE_LENGTH)
+                throw new ValidationException("Event title must not exceed 200 characters.");
+
+            if (description?.Length > MAX_DESCRIPTION_LENGTH)
+                throw new ValidationException("Event description must not exceed 2000 characters.");
+
             if (endAt <= startAt)
                 throw new ArgumentException("The end date must be later than the start date.", nameof(endAt));
+
+            if (startAt < DateTime.UtcNow)
+                throw new ValidationException("Event cannot start in the past.");
 
             if (totalSeats <= 0)
                 throw new ValidationException("The total number of seats must be greater than zero.");
@@ -148,7 +175,7 @@ namespace EventManager.Api.Models
             }
         }
 
-        /// <summary>Создаёт версию события с обновлёнными общими данными и прежним состоянием мест.</summary>
+        /// <summary>Обновляет общие данные события, сохраняя состояние мест и бронирования.</summary>
         /// <param name="title">Новое название события.</param>
         /// <param name="description">Новое описание события.</param>
         /// <param name="startAt">Новая дата и время начала события.</param>
@@ -162,14 +189,27 @@ namespace EventManager.Api.Models
         {
             lock (_seatLock)
             {
-                return new Event(
-                    Id,
-                    title,
-                    description,
-                    startAt,
-                    endAt,
-                    TotalSeats,
-                    _availableSeats);
+                if (string.IsNullOrWhiteSpace(title))
+                    throw new ArgumentException("Event title must not be empty.", nameof(title));
+
+                if (title.Length > MAX_TITLE_LENGTH)
+                    throw new ValidationException("Event title must not exceed 200 characters.");
+
+                if (description?.Length > MAX_DESCRIPTION_LENGTH)
+                    throw new ValidationException("Event description must not exceed 2000 characters.");
+
+                if (endAt <= startAt)
+                    throw new ArgumentException("The end date must be later than the start date.", nameof(endAt));
+
+                if (startAt != StartAt && startAt < DateTime.UtcNow)
+                    throw new ValidationException("Event cannot start in the past.");
+
+                Title = title.Trim();
+                Description = description;
+                StartAt = startAt;
+                EndAt = endAt;
+
+                return this;
             }
         }
     }

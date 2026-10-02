@@ -9,9 +9,11 @@ namespace EventManager.Api.Models.Dtos
     {
         /// <summary>Получает или задаёт название создаваемого события.</summary>
         [Required(ErrorMessage = "Specify the event title.")]
+        [MaxLength(Event.MAX_TITLE_LENGTH, ErrorMessage = "Event title must not exceed 200 characters.")]
         public string Title { get; set; } = string.Empty;
 
         /// <summary>Получает или задаёт описание создаваемого события.</summary>
+        [MaxLength(Event.MAX_DESCRIPTION_LENGTH, ErrorMessage = "Event description must not exceed 2000 characters.")]
         public string? Description { get; set; }
 
         /// <summary>Получает или задаёт дату и время начала создаваемого события.</summary>

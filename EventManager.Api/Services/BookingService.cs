@@ -3,25 +3,33 @@ using EventManager.Api.Mappers;
 using EventManager.Api.Models;
 using EventManager.Api.Models.Dtos;
 using EventManager.Api.Models.Results;
-using EventManager.Api.Repositories;
+using EventManager.Api.DataAccess;
+using Microsoft.EntityFrameworkCore;
 
 namespace EventManager.Api.Services
 {
     /// <summary>
     /// Реализует операции создания и получения бронирований.
     /// </summary>
-    /// <param name="eventRepository">Хранилище событий в памяти.</param>
-    /// <param name="bookingRepository">Хранилище бронирований в памяти.</param>
-    public class BookingService(
-        InMemoryEventRepository eventRepository,
-        InMemoryBookingRepository bookingRepository) : IBookingService
+    /// <param name="context">Контекст базы данных.</param>
+    public class BookingService(AppDbContext context) : IBookingService
     {
         /// <inheritdoc />
-        public Task<ServiceResult<BookingInfo>> CreateBookingAsync(Guid eventId)
+        public async Task<ServiceResult<BookingInfo>> CreateBookingAsync(Guid eventId, CancellationToken cancellationToken = default)
         {
-            ServiceResult<BookingInfo> result = eventRepository.ExecuteSynchronized(() =>
+            await BookingSynchronization.SeatSemaphore.WaitAsync(cancellationToken);
+
+            try
             {
-                if (!eventRepository.Events.TryGetValue(eventId, out Event? @event))
+                Event? @event = await context.Events.SingleOrDefaultAsync(entity => entity.Id == eventId, cancellationToken);
+
+                if (@event is not null)
+                {
+                    // Обновляет состояние, если событие уже загружалось в текущем scope.
+                    await context.Entry(@event).ReloadAsync(cancellationToken);
+                }
+
+                if (@event is null || context.Entry(@event).State == EntityState.Detached)
                 {
                     return ServiceResult<BookingInfo>.Fail(
                         ServiceErrorType.NotFound,
@@ -33,33 +41,32 @@ namespace EventManager.Api.Services
 
                 Booking booking = new Booking(eventId);
 
-                if (bookingRepository.Bookings.TryAdd(booking.Id, booking))
-                {
-                    return ServiceResult<BookingInfo>.Succeed(booking.ToInfo());
-                }
+                context.Bookings.Add(booking);
+                await context.SaveChangesAsync(cancellationToken);
 
-                @event.ReleaseSeats();
-                return ServiceResult<BookingInfo>.Fail(
-                    ServiceErrorType.Internal,
-                    "Failed to create booking.");
-            });
-
-            return Task.FromResult(result);
+                return ServiceResult<BookingInfo>.Succeed(booking.ToInfo());
+            }
+            finally
+            {
+                BookingSynchronization.SeatSemaphore.Release();
+            }
         }
 
         /// <inheritdoc />
-        public Task<ServiceResult<BookingInfo>> GetBookingByIdAsync(Guid bookingId)
+        public async Task<ServiceResult<BookingInfo>> GetBookingByIdAsync(Guid bookingId, CancellationToken cancellationToken = default)
         {
-            if (bookingRepository.Bookings.TryGetValue(bookingId, out Booking? booking))
+            cancellationToken.ThrowIfCancellationRequested();
+            Booking? booking = await context.Bookings.AsNoTracking()
+                .SingleOrDefaultAsync(entity => entity.Id == bookingId, cancellationToken);
+
+            if (booking is not null)
             {
-                return Task.FromResult(
-                    ServiceResult<BookingInfo>.Succeed(booking.ToInfo()));
+                return ServiceResult<BookingInfo>.Succeed(booking.ToInfo());
             }
 
-            return Task.FromResult(
-                ServiceResult<BookingInfo>.Fail(
-                    ServiceErrorType.NotFound,
-                    "Booking not found."));
+            return ServiceResult<BookingInfo>.Fail(
+                ServiceErrorType.NotFound,
+                "Booking not found.");
         }
     }
 }

@@ -2,43 +2,49 @@ using EventManager.Api.Mappers;
 using EventManager.Api.Models;
 using EventManager.Api.Models.Dtos;
 using EventManager.Api.Models.Results;
-using EventManager.Api.Repositories;
+using EventManager.Api.DataAccess;
+using Microsoft.EntityFrameworkCore;
 
 namespace EventManager.Api.Services
 {
     /// <summary>
     /// Реализует операции создания, получения, обновления и удаления событий.
     /// </summary>
-    /// <param name="eventRepository">Хранилище событий в памяти.</param>
-    public class EventService(InMemoryEventRepository eventRepository) : IEventService
+    /// <param name="context">Контекст базы данных.</param>
+    public class EventService(AppDbContext context) : IEventService
     {
         /// <inheritdoc />
-        public ServiceResult<EventDto> GetEventById(Guid id)
+        public async Task<ServiceResult<EventDto>> GetEventByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
-            if (eventRepository.Events.TryGetValue(id, out Event? @event))
+            cancellationToken.ThrowIfCancellationRequested();
+            Event? @event = await context.Events.AsNoTracking().SingleOrDefaultAsync(entity => entity.Id == id, cancellationToken);
+
+            if (@event is not null)
                 return ServiceResult<EventDto>.Succeed(@event.ToDto());
 
             return ServiceResult<EventDto>.Fail(ServiceErrorType.NotFound, "Event not found.");
         }
 
         /// <inheritdoc />
-        public PaginatedResult GetEvents(
+        public async Task<PaginatedResult> GetEventsAsync(
             string? title = null,
             DateTime? from = null,
             DateTime? to = null,
             int page = 1,
-            int pageSize = 10)
+            int pageSize = 10,
+            CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             ArgumentOutOfRangeException.ThrowIfLessThan(page, 1);
             ArgumentOutOfRangeException.ThrowIfLessThan(pageSize, 1);
 
-            IEnumerable<Event> events = eventRepository.Events.Values;
+            IQueryable<Event> events = context.Events.AsNoTracking();
 
             if (!string.IsNullOrWhiteSpace(title))
             {
                 string normalizedTitle = title.Trim().ToUpperInvariant();
                 events = events.Where(@event =>
-                    @event.Title.ToUpperInvariant().Contains(normalizedTitle));
+                    @event.Title.ToUpper().Contains(normalizedTitle));
             }
 
             if (from is not null)
@@ -47,54 +53,70 @@ namespace EventManager.Api.Services
             if (to is not null)
                 events = events.Where(@event => @event.EndAt <= to.Value);
 
-            int totalCount = events.Count();
+            int totalCount = await events.CountAsync(cancellationToken);
             int offset = (page - 1) * pageSize;
 
-            List<EventDto> pageEvents = events
+            List<Event> pageEvents = await events
                 .OrderBy(@event => @event.StartAt)
                 .ThenBy(@event => @event.Id)
                 .Skip(offset)
                 .Take(pageSize)
-                .Select(@event => @event.ToDto())
-                .ToList();
+                .ToListAsync(cancellationToken);
 
             return new PaginatedResult
             {
                 TotalCount = totalCount,
-                Events = pageEvents,
+                Items = pageEvents.Select(@event => @event.ToDto()).ToList(),
                 Page = page,
                 PageSize = pageSize
             };
         }
 
         /// <inheritdoc />
-        public ServiceResult<EventDto> CreateEvent(CreateEventDto dto)
+        public async Task<ServiceResult<EventDto>> CreateEventAsync(CreateEventDto dto, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (string.IsNullOrWhiteSpace(dto.Title))
                 return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "Event title must not be empty.");
+
+            if (dto.Title.Length > Event.MAX_TITLE_LENGTH)
+                return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "Event title must not exceed 200 characters.");
+
+            if (dto.Description?.Length > Event.MAX_DESCRIPTION_LENGTH)
+                return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "Event description must not exceed 2000 characters.");
 
             if (dto.StartAt is not DateTime startAt || dto.EndAt is not DateTime endAt)
                 return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "Start and end dates are required.");
 
             if (endAt <= startAt)
                 return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "The end date must be later than the start date.");
+
+            if (startAt < DateTime.UtcNow)
+                return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "Event cannot start in the past.");
 
             if (dto.TotalSeats is not int totalSeats || totalSeats <= 0)
                 return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "The total number of seats must be greater than zero.");
 
             Event @event = dto.ToEvent();
 
-            if (eventRepository.Events.TryAdd(@event.Id, @event))
-                return ServiceResult<EventDto>.Succeed(@event.ToDto());
+            context.Events.Add(@event);
+            await context.SaveChangesAsync(cancellationToken);
 
-            return ServiceResult<EventDto>.Fail(ServiceErrorType.Internal, "Failed to create event.");
+            return ServiceResult<EventDto>.Succeed(@event.ToDto());
         }
 
         /// <inheritdoc />
-        public ServiceResult<EventDto> UpdateEvent(Guid id, UpdateEventDto dto)
+        public async Task<ServiceResult<EventDto>> UpdateEventAsync(Guid id, UpdateEventDto dto, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (string.IsNullOrWhiteSpace(dto.Title))
                 return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "Event title must not be empty.");
+
+            if (dto.Title.Length > Event.MAX_TITLE_LENGTH)
+                return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "Event title must not exceed 200 characters.");
+
+            if (dto.Description?.Length > Event.MAX_DESCRIPTION_LENGTH)
+                return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "Event description must not exceed 2000 characters.");
 
             if (dto.StartAt is not DateTime startAt || dto.EndAt is not DateTime endAt)
                 return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "Start and end dates are required.");
@@ -102,32 +124,33 @@ namespace EventManager.Api.Services
             if (endAt <= startAt)
                 return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "The end date must be later than the start date.");
 
-            return eventRepository.ExecuteSynchronized(() =>
-            {
-                if (eventRepository.Events.TryGetValue(id, out Event? @event))
-                {
-                    Event updatedEvent = dto.ToEvent(@event);
+            Event? @event = await context.Events.SingleOrDefaultAsync(entity => entity.Id == id, cancellationToken);
 
-                    if (eventRepository.Events.TryUpdate(id, updatedEvent, @event))
-                    {
-                        return ServiceResult<EventDto>.Succeed(updatedEvent.ToDto());
-                    }
-                }
-
+            if (@event is null)
                 return ServiceResult<EventDto>.Fail(ServiceErrorType.NotFound, "Event not found.");
-            });
+
+            if (startAt != @event.StartAt && startAt < DateTime.UtcNow)
+                return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "Event cannot start in the past.");
+
+            Event updatedEvent = dto.ToEvent(@event);
+            await context.SaveChangesAsync(cancellationToken);
+
+            return ServiceResult<EventDto>.Succeed(updatedEvent.ToDto());
         }
 
         /// <inheritdoc />
-        public ServiceResult DeleteEvent(Guid id)
+        public async Task<ServiceResult> DeleteEventAsync(Guid id, CancellationToken cancellationToken = default)
         {
-            return eventRepository.ExecuteSynchronized(() =>
-            {
-                if (eventRepository.Events.TryRemove(id, out _))
-                    return ServiceResult.Succeed();
+            cancellationToken.ThrowIfCancellationRequested();
+            Event? @event = await context.Events.SingleOrDefaultAsync(entity => entity.Id == id, cancellationToken);
 
+            if (@event is null)
                 return ServiceResult.Fail(ServiceErrorType.NotFound, "Event not found.");
-            });
+
+            context.Events.Remove(@event);
+            await context.SaveChangesAsync(cancellationToken);
+
+            return ServiceResult.Succeed();
         }
     }
 }

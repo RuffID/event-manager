@@ -1,20 +1,20 @@
 using EventManager.Api.Models;
-using EventManager.Api.Repositories;
+using EventManager.Api.DataAccess;
+using EventManager.Api.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace EventManager.Api.BackgroundServices
 {
     /// <summary>
     /// Обрабатывает ожидающие подтверждения бронирования.
     /// </summary>
-    /// <param name="bookingRepository">Хранилище бронирований в памяти.</param>
-    /// <param name="eventRepository">Хранилище событий в памяти.</param>
+    /// <param name="scopeFactory">Фабрика областей зависимостей для контекстов базы данных.</param>
     /// <param name="processingDelay">Искусственная задержка обработки.</param>
     /// <param name="logger">Сервис журналирования.</param>
     public class BookingProcessor(
-        InMemoryBookingRepository bookingRepository,
-        InMemoryEventRepository eventRepository,
+        IServiceScopeFactory scopeFactory,
         IBookingProcessingDelay processingDelay,
-        ILogger<BookingProcessor> logger)
+        ILogger<BookingProcessor> logger) : IDisposable
     {
         private readonly SemaphoreSlim _processingSemaphore = new(1, 1);
 
@@ -22,100 +22,115 @@ namespace EventManager.Api.BackgroundServices
         /// <param name="cancellationToken">Токен отмены операции.</param>
         public async Task ProcessPendingBookingsAsync(CancellationToken cancellationToken)
         {
-            List<Booking> pendingBookings = bookingRepository.Bookings.Values
-                .Where(booking => booking.Status == BookingStatus.Pending)
-                .ToList();
-
-            IEnumerable<Task> processingTasks = pendingBookings.Select(booking =>
-                ProcessBookingAsync(booking, cancellationToken));
-
-            await Task.WhenAll(processingTasks);
-        }
-
-        private async Task ProcessBookingAsync(
-            Booking booking,
-            CancellationToken cancellationToken)
-        {
-            logger.LogInformation("Начата обработка брони {BookingId}.", booking.Id);
+            // Не допускает повторной обработки одного набора при пересечении запусков.
+            await _processingSemaphore.WaitAsync(cancellationToken);
 
             try
             {
-                await processingDelay.WaitAsync(cancellationToken);
-                await _processingSemaphore.WaitAsync(cancellationToken);
-
-                try
+                List<Guid> pendingBookingIds;
+                await using (AsyncServiceScope scope = scopeFactory.CreateAsyncScope())
                 {
-                    if (!eventRepository.Events.ContainsKey(booking.EventId))
-                    {
-                        booking.Reject();
-                        bookingRepository.Bookings[booking.Id] = booking;
-
-                        logger.LogWarning(
-                            "Бронь {BookingId} отклонена: событие {EventId} не найдено.",
-                            booking.Id,
-                            booking.EventId);
-                        return;
-                    }
-
-                    booking.Confirm();
-                    bookingRepository.Bookings[booking.Id] = booking;
-                }
-                finally
-                {
-                    _processingSemaphore.Release();
+                    AppDbContext context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                    pendingBookingIds = await context.Bookings.AsNoTracking()
+                        .Where(booking => booking.Status == BookingStatus.Pending)
+                        .Select(booking => booking.Id)
+                        .ToListAsync(cancellationToken);
                 }
 
-                logger.LogInformation("Бронь {BookingId} подтверждена.", booking.Id);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                logger.LogInformation("Обработка брони {BookingId} отменена.", booking.Id);
-                throw;
-            }
-            catch (InvalidOperationException exception)
-                when (booking.Status != BookingStatus.Pending)
-            {
-                logger.LogWarning(
-                    exception,
-                    "Бронь {BookingId} уже была обработана и пропущена.",
-                    booking.Id);
-            }
-            catch (Exception exception)
-            {
-                logger.LogError(
-                    exception,
-                    "При обработке брони {BookingId} произошла ошибка.",
-                    booking.Id);
+                IEnumerable<Task> processingTasks = pendingBookingIds.Select(bookingId =>
+                    ProcessBookingAsync(bookingId, cancellationToken));
 
-                await RejectBookingAsync(booking);
-            }
-        }
-
-        private async Task RejectBookingAsync(Booking booking)
-        {
-            // Компенсация после ошибки должна завершиться даже при остановке приложения.
-            await _processingSemaphore.WaitAsync(CancellationToken.None);
-
-            try
-            {
-                if (booking.Status != BookingStatus.Pending)
-                    return;
-
-                booking.Reject();
-                bookingRepository.Bookings[booking.Id] = booking;
-
-                if (eventRepository.Events.TryGetValue(booking.EventId, out Event? @event))
-                {
-                    @event.ReleaseSeats();
-                    eventRepository.Events[@event.Id] = @event;
-                }
-
-                logger.LogWarning("Бронь {BookingId} отклонена после ошибки.", booking.Id);
+                await Task.WhenAll(processingTasks);
             }
             finally
             {
                 _processingSemaphore.Release();
             }
         }
+
+        private async Task ProcessBookingAsync(
+            Guid bookingId,
+            CancellationToken cancellationToken)
+        {
+            logger.LogInformation("Начата обработка брони {BookingId}.", bookingId);
+
+            try
+            {
+                await processingDelay.WaitAsync(cancellationToken);
+
+                await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
+                AppDbContext context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                Booking? booking = await context.Bookings
+                    .SingleOrDefaultAsync(entity => entity.Id == bookingId, cancellationToken);
+
+                if (booking is null || booking.Status != BookingStatus.Pending)
+                    return;
+
+                bool eventExists = await context.Events.AnyAsync(entity => entity.Id == booking.EventId, cancellationToken);
+
+                if (!eventExists)
+                    booking.Reject();
+                else
+                    booking.Confirm();
+
+                await context.SaveChangesAsync(cancellationToken);
+                logger.LogInformation("Бронь {BookingId} обработана со статусом {Status}.", bookingId, booking.Status);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                logger.LogInformation("Обработка брони {BookingId} отменена.", bookingId);
+                throw;
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(
+                    exception,
+                    "При обработке брони {BookingId} произошла ошибка.",
+                    bookingId);
+
+                try
+                {
+                    await RejectBookingAsync(bookingId);
+                }
+                catch (Exception rejectionException)
+                {
+                    logger.LogError(rejectionException,
+                        "Не удалось отклонить бронь {BookingId} и вернуть место после ошибки.", bookingId);
+                }
+            }
+        }
+
+        private async Task RejectBookingAsync(Guid bookingId)
+        {
+            // Компенсация после ошибки должна завершиться даже при остановке приложения.
+            await BookingSynchronization.SeatSemaphore.WaitAsync(CancellationToken.None);
+
+            try
+            {
+                await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
+                AppDbContext context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                Booking? booking = await context.Bookings
+                    .SingleOrDefaultAsync(entity => entity.Id == bookingId, CancellationToken.None);
+
+                if (booking is null || booking.Status != BookingStatus.Pending)
+                    return;
+
+                booking.Reject();
+                Event? @event = await context.Events
+                    .SingleOrDefaultAsync(entity => entity.Id == booking.EventId, CancellationToken.None);
+
+                @event?.ReleaseSeats();
+
+                await context.SaveChangesAsync(CancellationToken.None);
+                logger.LogWarning("Бронь {BookingId} отклонена после ошибки.", booking.Id);
+            }
+            finally
+            {
+                BookingSynchronization.SeatSemaphore.Release();
+            }
+        }
+
+        /// <summary>Освобождает ресурсы синхронизации после завершения обработки.</summary>
+        public void Dispose() => _processingSemaphore.Dispose();
     }
 }

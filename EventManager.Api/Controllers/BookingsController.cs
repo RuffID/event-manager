@@ -19,6 +19,7 @@ namespace EventManager.Api.Controllers
         /// Возвращает бронь по идентификатору.
         /// </summary>
         /// <param name="id">Идентификатор брони.</param>
+        /// <param name="cancellationToken">Токен отмены HTTP-запроса.</param>
         /// <response code="200">Возвращает найденную бронь.</response>
         /// <response code="404">Бронь с указанным идентификатором не найдена.</response>
         /// <response code="500">Не удалось обработать запрос.</response>
@@ -26,9 +27,9 @@ namespace EventManager.Api.Controllers
         [ProducesResponseType(typeof(BookingInfo), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetBooking(Guid id)
+        public async Task<IActionResult> GetBooking(Guid id, CancellationToken cancellationToken = default)
         {
-            ServiceResult<BookingInfo> result = await bookingService.GetBookingByIdAsync(id);
+            ServiceResult<BookingInfo> result = await bookingService.GetBookingByIdAsync(id, cancellationToken);
             return this.ToActionResult(result, booking => Ok(booking));
         }
     }

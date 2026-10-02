@@ -38,7 +38,7 @@ namespace EventManager.Api.Mappers
                 dto.TotalSeats!.Value);
         }
 
-        /// <summary>Создаёт сущность события из DTO запроса на обновление.</summary>
+        /// <summary>Обновляет сущность события данными DTO запроса.</summary>
         /// <param name="dto">DTO с новыми данными события.</param>
         /// <param name="event">Обновляемое событие.</param>
         /// <returns>Сущность события с обновлёнными данными.</returns>
