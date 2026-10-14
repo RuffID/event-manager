@@ -599,6 +599,118 @@ namespace EventManager.Api.Tests.Services
             Assert.Equal(pastStartAt, updatedEvent.StartAt);
         }
 
+        [Theory]
+        [InlineData(1, 2, "0,1")]
+        [InlineData(2, 2, "2,3")]
+        [InlineData(3, 2, "4,5")]
+        [InlineData(4, 2, "6")]
+        [InlineData(5, 2, "")]
+        [InlineData(1, 1, "0")]
+        [InlineData(2, 1, "1")]
+        [InlineData(1, 7, "0,1,2,3,4,5,6")]
+        [InlineData(1, 20, "0,1,2,3,4,5,6")]
+        public async Task GetEvents_MapsEntityPageToDtosAndPreservesPaginationMetadata(
+            int page, int pageSize, string expectedIndexes)
+        {
+            // Arrange
+            DateTime start = new DateTime(2030, 1, 1, 10, 0, 0, DateTimeKind.Utc);
+            Event[] events = Enumerable.Range(0, 7)
+                .Select(index => CreateStoredEvent($"Event {index}", start.AddDays(index), start.AddDays(index).AddHours(2)))
+                .ToArray();
+            events[0].UpdateDetails(events[0].Title, "Описание страницы", events[0].StartAt, events[0].EndAt);
+            Assert.True(events[0].TryReserveSeats());
+            await CreateContextAsync(events);
+            Guid[] expectedIds = [];
+            if (expectedIndexes.Length > 0)
+            {
+                expectedIds = expectedIndexes.Split(',').Select(index => events[int.Parse(index)].Id).ToArray();
+            }
+
+            // Act
+            PaginatedResult result = await _database.EventService.GetEventsAsync(
+                page: page, pageSize: pageSize, cancellationToken: TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Equal(expectedIds, result.Items.Select(item => item.Id));
+            Assert.Equal(7, result.TotalCount);
+            Assert.Equal((7 + pageSize - 1) / pageSize, result.TotalPages);
+            Assert.Equal(page, result.Page);
+            Assert.Equal(pageSize, result.PageSize);
+            foreach (EventDto item in result.Items)
+            {
+                Event expected = Assert.Single(events, candidate => candidate.Id == item.Id);
+                Assert.Equal(expected.Title, item.Title);
+                Assert.Equal(expected.Description, item.Description);
+                Assert.Equal(expected.StartAt, item.StartAt);
+                Assert.Equal(expected.EndAt, item.EndAt);
+                Assert.Equal(expected.TotalSeats, item.TotalSeats);
+                Assert.Equal(expected.AvailableSeats, item.AvailableSeats);
+            }
+        }
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(3)]
+        [InlineData(4)]
+        public async Task GetEvents_PreservesFilteredTotalAndMetadataBeyondLastPage(int page)
+        {
+            // Arrange
+            DateTime start = new DateTime(2030, 1, 1, 10, 0, 0, DateTimeKind.Utc);
+            Event[] events =
+            [
+                CreateStoredEvent("Alpha first", start, start.AddHours(2)),
+                CreateStoredEvent("Alpha second", start.AddHours(2), start.AddHours(4)),
+                CreateStoredEvent("Alpha third", start.AddHours(4), start.AddHours(6)),
+                CreateStoredEvent("Other", start, start.AddHours(2)),
+                CreateStoredEvent("Alpha later", start.AddHours(6), start.AddHours(8))
+            ];
+            await CreateContextAsync(events);
+
+            // Act
+            PaginatedResult result = await _database.EventService.GetEventsAsync(
+                title: "alpha", from: start, to: start.AddHours(6),
+                page: page, pageSize: 1, cancellationToken: TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Equal(3, result.TotalCount);
+            Assert.Equal(3, result.TotalPages);
+            Assert.Equal(page, result.Page);
+            Assert.Equal(1, result.PageSize);
+            if (page <= 3)
+            {
+                Assert.Equal(events[page - 1].Id, Assert.Single(result.Items).Id);
+            }
+            else
+            {
+                Assert.Empty(result.Items);
+            }
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("missing")]
+        public async Task GetEvents_PreservesMetadataWhenNoRowsMatch(string? title)
+        {
+            // Arrange
+            if (title is not null)
+            {
+                DateTime start = new DateTime(2030, 1, 1, 10, 0, 0, DateTimeKind.Utc);
+                await CreateContextAsync(CreateStoredEvent("Other", start, start.AddHours(2)));
+            }
+
+            // Act
+            PaginatedResult result = await _database.EventService.GetEventsAsync(
+                title: title, page: 1, pageSize: 2, cancellationToken: TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Empty(result.Items);
+            Assert.Equal(0, result.TotalCount);
+            Assert.Equal(0, result.TotalPages);
+            Assert.Equal(1, result.Page);
+            Assert.Equal(2, result.PageSize);
+        }
+
         private async Task<AppDbContext> CreateContextAsync(params Event[] events)
         {
             await _database.SeedAsync(events);

@@ -13,17 +13,19 @@ namespace EventManager.Api.DataAccess.Configurations
         {
             builder.ToTable("bookings");
             builder.HasKey(entity => entity.Id);
-            builder.Property(entity => entity.Id).ValueGeneratedNever();
+            builder.Property(entity => entity.Id).HasColumnName("id").ValueGeneratedNever();
 
-            builder.Property(entity => entity.EventId).IsRequired();
+            builder.Property(entity => entity.EventId).HasColumnName("event_id").IsRequired();
             builder.Property(entity => entity.Status)
+                .HasColumnName("status")
                 .HasField("_status")
                 .UsePropertyAccessMode(PropertyAccessMode.Field)
                 .HasConversion<string>()
                 .HasMaxLength(20)
                 .IsRequired();
-            builder.Property(entity => entity.CreatedAt).IsRequired();
+            builder.Property(entity => entity.CreatedAt).HasColumnName("created_at").IsRequired();
             builder.Property(entity => entity.ProcessedAt)
+                .HasColumnName("processed_at")
                 .HasField("_processedAt")
                 .UsePropertyAccessMode(PropertyAccessMode.Field)
                 .IsRequired(false);

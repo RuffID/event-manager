@@ -21,13 +21,19 @@ namespace EventManager.Api.Tests.Services
             {
                 options.UseInMemoryDatabase(databaseName);
                 if (interceptor is not null)
+                {
                     options.AddInterceptors(interceptor);
+                }
             });
             services.AddLogging();
+            services.AddRepositories();
             services.AddServices();
 
             if (processingDelay is not null)
+            {
                 services.AddSingleton(processingDelay);
+            }
+
             ServiceProvider = services.BuildServiceProvider(new ServiceProviderOptions
             {
                 ValidateScopes = true,

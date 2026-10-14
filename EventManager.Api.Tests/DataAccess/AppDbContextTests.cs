@@ -95,7 +95,12 @@ namespace EventManager.Api.Tests.DataAccess
             // Assert
             ITable eventsTable = Assert.IsAssignableFrom<ITable>(model.FindTable("events", null));
             ITable bookingsTable = Assert.IsAssignableFrom<ITable>(model.FindTable("bookings", null));
-            IColumn statusColumn = Assert.IsAssignableFrom<IColumn>(bookingsTable.FindColumn(nameof(Booking.Status)));
+            IColumn statusColumn = Assert.IsAssignableFrom<IColumn>(bookingsTable.FindColumn("status"));
+
+            string[] expectedEventColumns = ["available_seats", "description", "end_at", "id", "start_at", "title", "total_seats"];
+            string[] expectedBookingColumns = ["created_at", "event_id", "id", "processed_at", "status"];
+            Assert.Equal(expectedEventColumns, eventsTable.Columns.Select(column => column.Name).OrderBy(name => name, StringComparer.Ordinal));
+            Assert.Equal(expectedBookingColumns, bookingsTable.Columns.Select(column => column.Name).OrderBy(name => name, StringComparer.Ordinal));
 
             Assert.Equal(typeof(string), statusColumn.ProviderClrType);
             Assert.Equal(20, context.Model.FindEntityType(typeof(Booking))!.FindProperty(nameof(Booking.Status))!.GetMaxLength());

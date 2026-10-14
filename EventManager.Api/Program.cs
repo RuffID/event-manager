@@ -1,5 +1,7 @@
+using EventManager.Api.DataAccess;
 using EventManager.Api.Extensions;
 using EventManager.Api.Middlewares;
+using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,7 +32,12 @@ builder.Services.AddServices();
 
 var app = builder.Build();
 
-app.InitializeDatabase();
+using (IServiceScope scope = app.Services.CreateScope())
+{
+    AppDbContext db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    db.Database.Migrate();
+}
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
