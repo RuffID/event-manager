@@ -1,5 +1,4 @@
 using EventManager.Api.Models;
-using EventManager.Api.Models.Dtos;
 
 namespace EventManager.Api.DataAccess.Repositories
 {
@@ -16,7 +15,7 @@ namespace EventManager.Api.DataAccess.Repositories
         Task<Event?> GetCurrentByIdForUpdateAsync(Guid id, CancellationToken cancellationToken);
 
         /// <summary>Получает страницу без отслеживания с фильтрами и порядком StartAt, затем Id.</summary>
-        Task<PaginatedResult> GetPageAsync(
+        Task<EventPage> GetPageAsync(
             string? title,
             DateTime? from,
             DateTime? to,

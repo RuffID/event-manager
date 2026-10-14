@@ -40,7 +40,15 @@ namespace EventManager.Api.Services
             ArgumentOutOfRangeException.ThrowIfLessThan(page, 1);
             ArgumentOutOfRangeException.ThrowIfLessThan(pageSize, 1);
 
-            return await eventRepository.GetPageAsync(title, from, to, page, pageSize, cancellationToken);
+            EventPage eventPage = await eventRepository.GetPageAsync(title, from, to, page, pageSize, cancellationToken);
+
+            return new PaginatedResult
+            {
+                Items = eventPage.Items.Select(@event => @event.ToDto()).ToList(),
+                TotalCount = eventPage.TotalCount,
+                Page = page,
+                PageSize = pageSize
+            };
         }
 
         /// <inheritdoc />

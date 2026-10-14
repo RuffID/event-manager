@@ -2,7 +2,6 @@ using EventManager.Api.DataAccess;
 using EventManager.Api.DataAccess.Repositories;
 using EventManager.Api.IntegrationTests.Infrastructure;
 using EventManager.Api.Models;
-using EventManager.Api.Models.Dtos;
 using Xunit;
 
 namespace EventManager.Api.IntegrationTests.Repositories;
@@ -32,7 +31,7 @@ public class EventPageTests(PostgresFixture database)
         await using AppDbContext read = database.CreateContext();
 
         // Act
-        PaginatedResult result = await new EventRepository(read)
+        EventPage result = await new EventRepository(read)
             .GetPageAsync(title, null, null, 1, 20, CancellationToken.None);
 
         // Assert
@@ -58,7 +57,7 @@ public class EventPageTests(PostgresFixture database)
         await using AppDbContext read = database.CreateContext();
 
         // Act
-        PaginatedResult result = await new EventRepository(read)
+        EventPage result = await new EventRepository(read)
             .GetPageAsync(null, from, null, 1, 20, CancellationToken.None);
 
         // Assert
@@ -84,7 +83,7 @@ public class EventPageTests(PostgresFixture database)
         await using AppDbContext read = database.CreateContext();
 
         // Act
-        PaginatedResult result = await new EventRepository(read)
+        EventPage result = await new EventRepository(read)
             .GetPageAsync(null, null, to, 1, 20, CancellationToken.None);
 
         // Assert
@@ -126,7 +125,7 @@ public class EventPageTests(PostgresFixture database)
         await using AppDbContext read = database.CreateContext();
 
         // Act
-        PaginatedResult result = await new EventRepository(read)
+        EventPage result = await new EventRepository(read)
             .GetPageAsync(title, from, to, 1, 20, CancellationToken.None);
 
         // Assert
@@ -154,17 +153,14 @@ public class EventPageTests(PostgresFixture database)
         await using AppDbContext read = database.CreateContext();
 
         // Act
-        PaginatedResult result = await new EventRepository(read)
+        EventPage result = await new EventRepository(read)
             .GetPageAsync(null, null, null, page, pageSize, CancellationToken.None);
 
         // Assert
         Assert.Equal(expectedIds, result.Items.Select(item => item.Id).ToArray());
         Assert.Equal(7, result.TotalCount);
-        Assert.Equal((7 + pageSize - 1) / pageSize, result.TotalPages);
-        Assert.Equal(page, result.Page);
-        Assert.Equal(pageSize, result.PageSize);
         Assert.Empty(read.ChangeTracker.Entries());
-        foreach (EventDto item in result.Items)
+        foreach (Event item in result.Items)
         {
             Event expected = Assert.Single(events, candidate => candidate.Id == item.Id);
             Assert.Equal(expected.Title, item.Title);
@@ -192,15 +188,13 @@ public class EventPageTests(PostgresFixture database)
         await using AppDbContext read = database.CreateContext();
 
         // Act
-        PaginatedResult result = await new EventRepository(read)
+        EventPage result = await new EventRepository(read)
             .GetPageAsync("alpha", start, start.AddHours(6), page, 1, CancellationToken.None);
 
         // Assert
         Assert.Equal(expectedIds, result.Items.Select(item => item.Id).ToArray());
         Assert.Equal(3, result.TotalCount);
-        Assert.Equal(3, result.TotalPages);
-        Assert.Equal(page, result.Page);
-        Assert.Equal(1, result.PageSize);
+        Assert.Empty(read.ChangeTracker.Entries());
     }
 
     [Fact]
@@ -211,23 +205,19 @@ public class EventPageTests(PostgresFixture database)
         await using AppDbContext read = database.CreateContext();
 
         // Act
-        PaginatedResult result = await new EventRepository(read)
+        EventPage result = await new EventRepository(read)
             .GetPageAsync(null, null, null, 1, 2, CancellationToken.None);
 
         // Assert
         Assert.Empty(result.Items);
         Assert.Equal(0, result.TotalCount);
-        Assert.Equal(0, result.TotalPages);
-        Assert.Equal(1, result.Page);
-        Assert.Equal(2, result.PageSize);
+        Assert.Empty(read.ChangeTracker.Entries());
     }
 
-    private static void AssertFilteredPage(PaginatedResult result, Guid[] expectedIds, AppDbContext context)
+    private static void AssertFilteredPage(EventPage result, Guid[] expectedIds, AppDbContext context)
     {
         Assert.Equal(expectedIds, result.Items.Select(item => item.Id).ToArray());
         Assert.Equal(expectedIds.Length, result.TotalCount);
-        Assert.Equal(1, result.Page);
-        Assert.Equal(20, result.PageSize);
         Assert.Empty(context.ChangeTracker.Entries());
     }
 

@@ -1,6 +1,4 @@
-using EventManager.Api.Mappers;
 using EventManager.Api.Models;
-using EventManager.Api.Models.Dtos;
 using Microsoft.EntityFrameworkCore;
 
 namespace EventManager.Api.DataAccess.Repositories
@@ -42,7 +40,7 @@ namespace EventManager.Api.DataAccess.Repositories
         }
 
         /// <inheritdoc />
-        public async Task<PaginatedResult> GetPageAsync(
+        public async Task<EventPage> GetPageAsync(
             string? title,
             DateTime? from,
             DateTime? to,
@@ -78,13 +76,7 @@ namespace EventManager.Api.DataAccess.Repositories
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
 
-            return new PaginatedResult
-            {
-                TotalCount = totalCount,
-                Items = pageEvents.Select(@event => @event.ToDto()).ToList(),
-                Page = page,
-                PageSize = pageSize
-            };
+            return new EventPage(pageEvents, totalCount);
         }
 
         /// <inheritdoc />

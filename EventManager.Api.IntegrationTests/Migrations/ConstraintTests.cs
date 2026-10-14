@@ -165,7 +165,7 @@ public class ConstraintTests(PostgresFixture database)
         PostgresException postgres = Assert.IsType<PostgresException>(exception.InnerException);
         Assert.Equal(PostgresErrorCodes.NotNullViolation, postgres.SqlState);
         Assert.Equal("events", postgres.TableName);
-        Assert.Equal("Title", postgres.ColumnName);
+        Assert.Equal("title", postgres.ColumnName);
         await using AppDbContext verify = database.CreateContext();
 
         Assert.False(await verify.Events.AnyAsync(CancellationToken.None));
@@ -173,10 +173,10 @@ public class ConstraintTests(PostgresFixture database)
 
     [Theory]
     [InlineData("id")]
-    [InlineData("StartAt")]
-    [InlineData("EndAt")]
-    [InlineData("TotalSeats")]
-    [InlineData("AvailableSeats")]
+    [InlineData("start_at")]
+    [InlineData("end_at")]
+    [InlineData("total_seats")]
+    [InlineData("available_seats")]
     public async Task Events_RejectNullInEveryRequiredValueColumn(string column)
     {
         // Arrange
@@ -190,19 +190,19 @@ public class ConstraintTests(PostgresFixture database)
         {
             id = null;
         }
-        else if (column == "StartAt")
+        else if (column == "start_at")
         {
             start = null;
         }
-        else if (column == "EndAt")
+        else if (column == "end_at")
         {
             end = null;
         }
-        else if (column == "TotalSeats")
+        else if (column == "total_seats")
         {
             totalSeats = null;
         }
-        else if (column == "AvailableSeats")
+        else if (column == "available_seats")
         {
             availableSeats = null;
         }
@@ -217,7 +217,7 @@ public class ConstraintTests(PostgresFixture database)
         // Параметризованный INSERT только для недостижимых через модель отрицательных сценариев.
         PostgresException exception = await Assert.ThrowsAsync<PostgresException>(() => write.Database.ExecuteSqlAsync(
             $"""
-            INSERT INTO events (id, "Title", "StartAt", "EndAt", "TotalSeats", "AvailableSeats")
+            INSERT INTO events (id, title, start_at, end_at, total_seats, available_seats)
             VALUES ({id}, {"Valid title"}, {start}, {end}, {totalSeats}, {availableSeats})
             """, CancellationToken.None));
 
@@ -231,10 +231,10 @@ public class ConstraintTests(PostgresFixture database)
     }
 
     [Theory]
-    [InlineData("Id")]
+    [InlineData("id")]
     [InlineData("event_id")]
-    [InlineData("Status")]
-    [InlineData("CreatedAt")]
+    [InlineData("status")]
+    [InlineData("created_at")]
     public async Task Bookings_RejectNullInEveryRequiredColumn(string column)
     {
         // Arrange
@@ -245,7 +245,7 @@ public class ConstraintTests(PostgresFixture database)
         Guid? eventId = parent.Id;
         string? status = nameof(BookingStatus.Pending);
         DateTime? createdAt = DateTime.UtcNow;
-        if (column == "Id")
+        if (column == "id")
         {
             id = null;
         }
@@ -253,11 +253,11 @@ public class ConstraintTests(PostgresFixture database)
         {
             eventId = null;
         }
-        else if (column == "Status")
+        else if (column == "status")
         {
             status = null;
         }
-        else if (column == "CreatedAt")
+        else if (column == "created_at")
         {
             createdAt = null;
         }
@@ -271,7 +271,7 @@ public class ConstraintTests(PostgresFixture database)
         // Act
         PostgresException exception = await Assert.ThrowsAsync<PostgresException>(() => write.Database.ExecuteSqlAsync(
             $"""
-            INSERT INTO bookings ("Id", event_id, "Status", "CreatedAt")
+            INSERT INTO bookings (id, event_id, status, created_at)
             VALUES ({id}, {eventId}, {status}, {createdAt})
             """, CancellationToken.None));
 
@@ -300,7 +300,7 @@ public class ConstraintTests(PostgresFixture database)
         // Act
         PostgresException exception = await Assert.ThrowsAsync<PostgresException>(() => write.Database.ExecuteSqlAsync(
             $"""
-            INSERT INTO bookings ("Id", event_id, "Status", "CreatedAt")
+            INSERT INTO bookings (id, event_id, status, created_at)
             VALUES ({id}, {parent.Id}, {status}, {createdAt})
             """, CancellationToken.None));
 

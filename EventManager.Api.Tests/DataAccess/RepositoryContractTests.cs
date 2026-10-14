@@ -70,7 +70,7 @@ namespace EventManager.Api.Tests.DataAccess
             // Act
             Event? readEvent = await events.GetByIdAsync(@event.Id, token);
             Booking? readBooking = await bookings.GetByIdAsync(pending.Id, token);
-            PaginatedResult page = await events.GetPageAsync(null, null, null, 1, 10, token);
+            EventPage page = await events.GetPageAsync(null, null, null, 1, 10, token);
             IReadOnlyList<Guid> pendingIds = await bookings.GetPendingIdsAsync(token);
             bool exists = await events.ExistsAsync(@event.Id, token);
 

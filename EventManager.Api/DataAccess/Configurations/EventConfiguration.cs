@@ -15,12 +15,13 @@ namespace EventManager.Api.DataAccess.Configurations
             builder.HasKey(entity => entity.Id);
             builder.Property(entity => entity.Id).HasColumnName("id").ValueGeneratedNever();
 
-            builder.Property(entity => entity.Title).HasMaxLength(Event.MAX_TITLE_LENGTH).IsRequired();
-            builder.Property(entity => entity.Description).HasMaxLength(Event.MAX_DESCRIPTION_LENGTH).IsRequired(false);
-            builder.Property(entity => entity.StartAt).IsRequired();
-            builder.Property(entity => entity.EndAt).IsRequired();
-            builder.Property(entity => entity.TotalSeats).IsRequired();
+            builder.Property(entity => entity.Title).HasColumnName("title").HasMaxLength(Event.MAX_TITLE_LENGTH).IsRequired();
+            builder.Property(entity => entity.Description).HasColumnName("description").HasMaxLength(Event.MAX_DESCRIPTION_LENGTH).IsRequired(false);
+            builder.Property(entity => entity.StartAt).HasColumnName("start_at").IsRequired();
+            builder.Property(entity => entity.EndAt).HasColumnName("end_at").IsRequired();
+            builder.Property(entity => entity.TotalSeats).HasColumnName("total_seats").IsRequired();
             builder.Property(entity => entity.AvailableSeats)
+                .HasColumnName("available_seats")
                 .HasField("_availableSeats")
                 .UsePropertyAccessMode(PropertyAccessMode.Field)
                 .IsRequired();
