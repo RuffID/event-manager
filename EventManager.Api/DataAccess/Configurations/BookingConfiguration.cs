@@ -15,7 +15,7 @@ namespace EventManager.Api.DataAccess.Configurations
             builder.HasKey(entity => entity.Id);
             builder.Property(entity => entity.Id).ValueGeneratedNever();
 
-            builder.Property(entity => entity.EventId).IsRequired();
+            builder.Property(entity => entity.EventId).HasColumnName("event_id").IsRequired();
             builder.Property(entity => entity.Status)
                 .HasField("_status")
                 .UsePropertyAccessMode(PropertyAccessMode.Field)

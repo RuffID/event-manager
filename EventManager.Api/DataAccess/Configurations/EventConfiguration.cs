@@ -13,7 +13,7 @@ namespace EventManager.Api.DataAccess.Configurations
         {
             builder.ToTable("events");
             builder.HasKey(entity => entity.Id);
-            builder.Property(entity => entity.Id).ValueGeneratedNever();
+            builder.Property(entity => entity.Id).HasColumnName("id").ValueGeneratedNever();
 
             builder.Property(entity => entity.Title).HasMaxLength(Event.MAX_TITLE_LENGTH).IsRequired();
             builder.Property(entity => entity.Description).HasMaxLength(Event.MAX_DESCRIPTION_LENGTH).IsRequired(false);
