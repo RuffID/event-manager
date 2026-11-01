@@ -45,15 +45,17 @@ namespace EventManager.Api.Tests.Services
         public async Task GetEvents_ReturnsAllEvents_WhenFiltersAreNotSpecified()
         {
             // Arrange
+            DateTime firstStartAt = DateTime.UtcNow.AddDays(1);
+            DateTime secondStartAt = firstStartAt.AddDays(1);
             Event firstEvent = CreateStoredEvent(
                 "Первая встреча",
-                new DateTime(2026, 11, 1, 10, 0, 0),
-                new DateTime(2026, 11, 1, 12, 0, 0));
+                firstStartAt,
+                firstStartAt.AddHours(2));
 
             Event secondEvent = CreateStoredEvent(
                 "Вторая встреча",
-                new DateTime(2026, 11, 2, 10, 0, 0),
-                new DateTime(2026, 11, 2, 12, 0, 0));
+                secondStartAt,
+                secondStartAt.AddHours(2));
 
             await CreateContextAsync(firstEvent, secondEvent);
             IEventService service = _database.EventService;
