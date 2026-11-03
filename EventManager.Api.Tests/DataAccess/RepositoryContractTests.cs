@@ -1,7 +1,8 @@
 using EventManager.Application.Abstractions.Persistence;
 using EventManager.Api.BackgroundServices;
 using EventManager.Api.DataAccess;
-using EventManager.Api.DataAccess.Repositories;
+using EventManager.Infrastructure.DataAccess.Repositories;
+using EventManager.Infrastructure.Extensions;
 using EventManager.Api.Extensions;
 using EventManager.Domain.Entities;
 using EventManager.Domain.Enums;

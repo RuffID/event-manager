@@ -50,23 +50,35 @@ http://localhost:5239/swagger/index.html
 
 Миграции создают и обновляют таблицы в БД. Для обычного запуска ничего выполнять вручную не нужно: приложение само применяет готовые миграции.
 
-Для команд ниже нужен `dotnet-ef` версии `10.0.12`. Перейдите в папку API:
+Проект контекста и миграций — `EventManager.Infrastructure`, startup project — `EventManager.Api`, контекст — `AppDbContext`. Новые миграции размещаются в `EventManager.Infrastructure/DataAccess/Migrations`. Для команд ниже используется совместимый `dotnet-ef` версии `10.0.12`.
+
+Команды выполняются из корня репозитория. Явно выберите каталог конфигурации:
 
 ```powershell
-Set-Location .\EventManager.Api
+$efConfigurationDirectory = (Resolve-Path .\EventManager.Api).Path
 ```
+
+`AppDbContextFactory` находится в Infrastructure и создаёт контекст без запуска веб-приложения, фоновых служб и применения миграций. Параметр после `--` выбирает единственный каталог с обязательным `appsettings.json`; без него используется текущий рабочий каталог. Относительный путь считается от текущего рабочего каталога. Другие каталоги автоматически не проверяются.
+
+Источники factory в порядке приоритета: выбранный `appsettings.json`, переменные окружения, аргументы после `--`. Файлы `appsettings.{Environment}.json`, launch profile и user secrets factory не загружает. Задайте `ConnectionStrings__DefaultConnection` во внешнем окружении, как показано выше; отсутствие или пустое значение останавливает создание контекста. Конфигурация и секреты не копируются в Infrastructure. Runtime и factory используют Npgsql и конфигурации из сборки самого `AppDbContext`.
+
+`Microsoft.EntityFrameworkCore.Design` с `PrivateAssets="all"` остаётся в API, через который CLI загружает design-time services. Интерфейс factory доступен Infrastructure из runtime-пакета EF Core. Пакет `Microsoft.EntityFrameworkCore.Tools` не нужен: используется CLI, а не Package Manager Console. Отдельные пакеты конфигурации `10.0.12` заменяют доступ к тем же провайдерам конфигурации через ASP.NET Core; Infrastructure не ссылается на `Microsoft.AspNetCore.App`.
 
 Если изменили модель данных, создайте новую миграцию, заменив `NextMigration` её названием:
 
 ```powershell
-dotnet ef migrations add NextMigration --context AppDbContext --output-dir DataAccess\Migrations
+dotnet ef migrations add NextMigration --project .\EventManager.Infrastructure\EventManager.Infrastructure.csproj --startup-project .\EventManager.Api\EventManager.Api.csproj --context AppDbContext --output-dir DataAccess\Migrations -- --configuration-directory $efConfigurationDirectory
 ```
 
 Применить миграции вручную:
 
 ```powershell
-dotnet ef database update --context AppDbContext
+dotnet ef database update --project .\EventManager.Infrastructure\EventManager.Infrastructure.csproj --startup-project .\EventManager.Api\EventManager.Api.csproj --context AppDbContext -- --configuration-directory $efConfigurationDirectory
 ```
+
+Обе существующие миграции (`20261014122528_InitialCreate`, `20261014145755_RenameColumnsToSnakeCase`), их designer-файлы и snapshot перенесены без изменения содержимого. Пространства имён `EventManager.Api.DataAccess` у контекста и `EventManager.Api.DataAccess.Migrations` у истории сохранены для совместимости generated-файлов; физически эти типы компилируются только в Infrastructure. Обратной ссылки на проект API нет. Контекст, конфигурации и миграции находятся в одной сборке, поэтому отдельный `MigrationsAssembly` не требуется.
+
+Остаётся вопрос метаданных после выделения Domain: snapshot и designer-файлы содержат строковые имена `EventManager.Api.Models.Event` и `EventManager.Api.Models.Booking`, а runtime использует `EventManager.Domain.Entities.Event` и `EventManager.Domain.Entities.Booking`. По статическому сравнению таблицы, столбцы и связи сохранены, но одних строковых имён недостаточно, чтобы установить наличие pending model changes или необходимость новой миграции. Перенос Infrastructure не исправляет это расхождение. Проверка сравнением моделей через EF tooling ещё не выполнена; история вручную не исправлялась, предупреждения не подавлялись. Перед изменением истории отдельно проверьте результат сравнения; этот этап не подтверждает готовность миграций к применению.
 
 Если БД создавалась старой версией проекта без миграций, для запуска используйте новую пустую БД.
 

@@ -4,6 +4,7 @@ using EventManager.Application.Services;
 using EventManager.Api.BackgroundServices;
 using EventManager.Api.Extensions;
 using EventManager.Application.Extensions;
+using EventManager.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;

@@ -18,7 +18,7 @@ namespace EventManager.Api.DataAccess
         /// <summary>Получает набор бронирований.</summary>
         public DbSet<Booking> Bookings => Set<Booking>();
 
-        /// <summary>Подключает конфигурации сущностей из сборки приложения.</summary>
+        /// <summary>Подключает конфигурации сущностей из сборки Infrastructure.</summary>
         /// <param name="modelBuilder">Построитель модели базы данных.</param>
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

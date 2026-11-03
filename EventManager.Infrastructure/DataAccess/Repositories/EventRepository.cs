@@ -1,8 +1,9 @@
+using EventManager.Api.DataAccess;
 using EventManager.Application.Abstractions.Persistence;
 using EventManager.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace EventManager.Api.DataAccess.Repositories
+namespace EventManager.Infrastructure.DataAccess.Repositories
 {
     /// <summary>Выполняет запросы и регистрирует изменения событий в общем scoped-контексте.</summary>
     /// <param name="context">Контекст текущей единицы работы.</param>

@@ -2,7 +2,7 @@ using EventManager.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace EventManager.Api.DataAccess.Configurations
+namespace EventManager.Infrastructure.DataAccess.Configurations
 {
     /// <summary>Настраивает хранение событий и связь с бронированиями.</summary>
     public class EventConfiguration : IEntityTypeConfiguration<Event>
