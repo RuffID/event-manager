@@ -1,11 +1,14 @@
-using EventManager.Api.DataAccess;
-using EventManager.Api.Models;
-using EventManager.Api.Services;
+using EventManager.Infrastructure.DataAccess;
+using EventManager.Domain.Entities;
+using EventManager.Application.Services;
 using EventManager.Api.BackgroundServices;
 using EventManager.Api.Extensions;
+using EventManager.Application.Extensions;
+using EventManager.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace EventManager.Api.Tests.Services
 {
@@ -27,11 +30,12 @@ namespace EventManager.Api.Tests.Services
             });
             services.AddLogging();
             services.AddRepositories();
-            services.AddServices();
+            services.AddApplication();
+            services.AddBookingProcessingHosting();
 
             if (processingDelay is not null)
             {
-                services.AddSingleton(processingDelay);
+                services.Replace(ServiceDescriptor.Singleton(processingDelay));
             }
 
             ServiceProvider = services.BuildServiceProvider(new ServiceProviderOptions

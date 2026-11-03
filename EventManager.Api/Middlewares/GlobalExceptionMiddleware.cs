@@ -1,4 +1,4 @@
-using EventManager.Api.Exceptions;
+using EventManager.Domain.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EventManager.Api.Middlewares

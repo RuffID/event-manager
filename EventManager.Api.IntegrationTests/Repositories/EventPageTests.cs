@@ -1,7 +1,8 @@
-using EventManager.Api.DataAccess;
-using EventManager.Api.DataAccess.Repositories;
+using EventManager.Application.Abstractions.Persistence;
+using EventManager.Infrastructure.DataAccess;
+using EventManager.Infrastructure.DataAccess.Repositories;
 using EventManager.Api.IntegrationTests.Infrastructure;
-using EventManager.Api.Models;
+using EventManager.Domain.Entities;
 using Xunit;
 
 namespace EventManager.Api.IntegrationTests.Repositories;

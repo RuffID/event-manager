@@ -1,55 +1,39 @@
 using EventManager.Api.BackgroundServices;
-using EventManager.Api.DataAccess;
-using EventManager.Api.DataAccess.Repositories;
-using EventManager.Api.Services;
-using Microsoft.EntityFrameworkCore;
+using EventManager.Application.Models.Dtos;
+using System.Reflection;
 
 namespace EventManager.Api.Extensions
 {
     /// <summary>
-    /// Содержит методы расширения для регистрации сервисов приложения.
+    /// Содержит методы расширения для регистрации Presentation и фонового хостинга.
     /// </summary>
     public static class ServiceCollectionExtensions
     {
-        /// <summary>Регистрирует контекст базы данных с провайдером PostgreSQL.</summary>
+        /// <summary>Регистрирует контроллеры, Swagger и XML-документацию API и прикладных DTO.</summary>
         /// <param name="services">Коллекция сервисов приложения.</param>
-        /// <param name="configuration">Конфигурация приложения.</param>
-        /// <returns>Коллекция сервисов с зарегистрированным контекстом.</returns>
-        public static IServiceCollection AddDataAccess(
-            this IServiceCollection services,
-            IConfiguration configuration)
+        /// <returns>Коллекция сервисов с регистрациями Presentation.</returns>
+        public static IServiceCollection AddPresentation(this IServiceCollection services)
         {
-            string? connectionString = configuration.GetConnectionString("DefaultConnection");
+            services.AddControllers();
 
-            if (string.IsNullOrWhiteSpace(connectionString))
+            // Регистрирует Swagger и подключает XML-документацию API и Application.
+            services.AddSwaggerGen(options =>
             {
-                throw new InvalidOperationException("Connection string 'DefaultConnection' is required.");
-            }
+                string apiXmlFileName = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                string applicationXmlFileName = $"{typeof(EventDto).Assembly.GetName().Name}.xml";
 
-            services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
-
-            return services.AddRepositories();
-        }
-
-        /// <summary>Регистрирует репозитории и общую границу сохранения в текущем scope.</summary>
-        /// <param name="services">Коллекция сервисов приложения.</param>
-        /// <returns>Коллекция сервисов с добавленными регистрациями доступа к данным.</returns>
-        public static IServiceCollection AddRepositories(this IServiceCollection services)
-        {
-            services.AddScoped<IEventRepository, EventRepository>();
-            services.AddScoped<IBookingRepository, BookingRepository>();
-            services.AddScoped<IUnitOfWork, EfUnitOfWork>();
+                options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, apiXmlFileName));
+                options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, applicationXmlFileName));
+            });
 
             return services;
         }
 
-        /// <summary>Регистрирует прикладные сервисы и фоновую обработку бронирований.</summary>
+        /// <summary>Регистрирует задержку, координатор и хостинг фоновой обработки бронирований.</summary>
         /// <param name="services">Коллекция сервисов приложения.</param>
         /// <returns>Коллекция сервисов с добавленными регистрациями.</returns>
-        public static IServiceCollection AddServices(this IServiceCollection services)
+        public static IServiceCollection AddBookingProcessingHosting(this IServiceCollection services)
         {
-            services.AddScoped<IEventService, EventService>();
-            services.AddScoped<IBookingService, BookingService>();
             services.AddSingleton<IBookingProcessingDelay, BookingProcessingDelay>();
             services.AddSingleton<BookingProcessor>();
             services.AddHostedService<BookingProcessingService>();

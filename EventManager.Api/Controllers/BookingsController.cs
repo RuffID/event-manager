@@ -1,7 +1,7 @@
 using EventManager.Api.Extensions;
-using EventManager.Api.Models.Dtos;
-using EventManager.Api.Models.Results;
-using EventManager.Api.Services;
+using EventManager.Application.Models.Dtos;
+using EventManager.Application.Models.Results;
+using EventManager.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EventManager.Api.Controllers
@@ -21,10 +21,12 @@ namespace EventManager.Api.Controllers
         /// <param name="id">Идентификатор брони.</param>
         /// <param name="cancellationToken">Токен отмены HTTP-запроса.</param>
         /// <response code="200">Возвращает найденную бронь.</response>
+        /// <response code="400">Передан невалидный идентификатор брони.</response>
         /// <response code="404">Бронь с указанным идентификатором не найдена.</response>
         /// <response code="500">Не удалось обработать запрос.</response>
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(BookingInfo), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetBooking(Guid id, CancellationToken cancellationToken = default)

@@ -1,4 +1,4 @@
-﻿using EventManager.Api.Models.Results;
+﻿using EventManager.Application.Models.Results;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EventManager.Api.Extensions

@@ -1,11 +1,11 @@
-using EventManager.Api.Models.Dtos;
-using EventManager.Api.Models;
-using EventManager.Api.Models.Results;
-using EventManager.Api.DataAccess;
+using EventManager.Application.Models.Dtos;
+using EventManager.Domain.Entities;
+using EventManager.Application.Models.Results;
+using EventManager.Infrastructure.DataAccess;
 using Microsoft.EntityFrameworkCore;
-using EventManager.Api.Services;
+using EventManager.Application.Services;
 using Xunit;
-using Event = EventManager.Api.Models.Event;
+using Event = EventManager.Domain.Entities.Event;
 
 namespace EventManager.Api.Tests.Services
 {
@@ -74,10 +74,11 @@ namespace EventManager.Api.Tests.Services
         public async Task GetEventById_ReturnsEvent_WhenEventExists()
         {
             // Arrange
+            DateTime startAt = DateTime.UtcNow.AddDays(1);
             Event existingEvent = CreateStoredEvent(
                 "Существующая встреча",
-                new DateTime(2026, 11, 3, 10, 0, 0),
-                new DateTime(2026, 11, 3, 12, 0, 0));
+                startAt,
+                startAt.AddHours(2));
 
             await CreateContextAsync(existingEvent);
             IEventService service = _database.EventService;

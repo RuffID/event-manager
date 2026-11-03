@@ -1,7 +1,7 @@
-using EventManager.Api.DataAccess;
-using EventManager.Api.DataAccess.Repositories;
+using EventManager.Infrastructure.DataAccess;
+using EventManager.Infrastructure.DataAccess.Repositories;
 using EventManager.Api.IntegrationTests.Infrastructure;
-using EventManager.Api.Models;
+using EventManager.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 

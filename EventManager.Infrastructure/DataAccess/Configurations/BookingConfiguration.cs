@@ -1,0 +1,39 @@
+using EventManager.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace EventManager.Infrastructure.DataAccess.Configurations
+{
+    /// <summary>Настраивает хранение бронирований и связь с событием.</summary>
+    public class BookingConfiguration : IEntityTypeConfiguration<Booking>
+    {
+        /// <summary>Описывает таблицу, свойства и навигации бронирования.</summary>
+        /// <param name="builder">Построитель конфигурации бронирования.</param>
+        public void Configure(EntityTypeBuilder<Booking> builder)
+        {
+            builder.ToTable("bookings");
+            builder.HasKey(entity => entity.Id);
+            builder.Property(entity => entity.Id).HasColumnName("id").ValueGeneratedNever();
+
+            builder.Property(entity => entity.EventId).HasColumnName("event_id").IsRequired();
+            builder.Property(entity => entity.Status)
+                .HasColumnName("status")
+                .HasField("_status")
+                .UsePropertyAccessMode(PropertyAccessMode.Field)
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .IsRequired();
+            builder.Property(entity => entity.CreatedAt).HasColumnName("created_at").IsRequired();
+            builder.Property(entity => entity.ProcessedAt)
+                .HasColumnName("processed_at")
+                .HasField("_processedAt")
+                .UsePropertyAccessMode(PropertyAccessMode.Field)
+                .IsRequired(false);
+
+            builder.HasOne(entity => entity.Event)
+                .WithMany(entity => entity.Bookings)
+                .HasForeignKey(entity => entity.EventId)
+                .IsRequired();
+        }
+    }
+}

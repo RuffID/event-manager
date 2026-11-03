@@ -1,0 +1,9 @@
+using EventManager.Domain.Entities;
+
+namespace EventManager.Application.Abstractions.Persistence
+{
+    /// <summary>Содержит материализованную страницу событий и количество записей до пагинации.</summary>
+    /// <param name="Items">Сущности текущей страницы без отслеживания.</param>
+    /// <param name="TotalCount">Общее количество отфильтрованных событий.</param>
+    public record EventPage(IReadOnlyList<Event> Items, int TotalCount);
+}

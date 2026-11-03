@@ -1,13 +1,14 @@
-using EventManager.Api.Exceptions;
-using EventManager.Api.Models;
-using EventManager.Api.Models.Dtos;
-using EventManager.Api.Models.Results;
-using EventManager.Api.DataAccess;
-using EventManager.Api.Services;
+using EventManager.Domain.Exceptions;
+using EventManager.Domain.Entities;
+using EventManager.Domain.Enums;
+using EventManager.Application.Models.Dtos;
+using EventManager.Application.Models.Results;
+using EventManager.Infrastructure.DataAccess;
+using EventManager.Application.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
-using Event = EventManager.Api.Models.Event;
+using Event = EventManager.Domain.Entities.Event;
 
 namespace EventManager.Api.Tests.Services
 {

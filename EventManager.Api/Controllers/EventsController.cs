@@ -1,6 +1,6 @@
-using EventManager.Api.Models.Dtos;
-using EventManager.Api.Models.Results;
-using EventManager.Api.Services;
+using EventManager.Application.Models.Dtos;
+using EventManager.Application.Models.Results;
+using EventManager.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 using EventManager.Api.Extensions;
 using System.ComponentModel.DataAnnotations;
@@ -29,8 +29,12 @@ namespace EventManager.Api.Controllers
         /// <param name="pageSize">Количество событий на странице.</param>
         /// <param name="cancellationToken">Токен отмены HTTP-запроса.</param>
         /// <response code="200">Возвращает список событий.</response>
+        /// <response code="400">Переданы невалидные параметры фильтрации или пагинации.</response>
+        /// <response code="500">Не удалось обработать запрос.</response>
         [HttpGet]
         [ProducesResponseType(typeof(PaginatedResult), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetEvents(
             [FromQuery] string? title = null,
             [FromQuery] DateTime? from = null,
@@ -49,10 +53,14 @@ namespace EventManager.Api.Controllers
         /// <param name="id">Идентификатор события.</param>
         /// <param name="cancellationToken">Токен отмены HTTP-запроса.</param>
         /// <response code="200">Возвращает найденное событие.</response>
+        /// <response code="400">Передан невалидный идентификатор события.</response>
         /// <response code="404">Событие с указанным идентификатором не найдено.</response>
+        /// <response code="500">Не удалось обработать запрос.</response>
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(EventDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetEvent(Guid id, CancellationToken cancellationToken = default)
         {
             ServiceResult<EventDto> result = await eventService.GetEventByIdAsync(id, cancellationToken);
@@ -89,11 +97,13 @@ namespace EventManager.Api.Controllers
         /// <param name="id">Идентификатор события.</param>
         /// <param name="cancellationToken">Токен отмены HTTP-запроса.</param>
         /// <response code="202">Бронь создана и ожидает обработки.</response>
+        /// <response code="400">Передан невалидный идентификатор события.</response>
         /// <response code="404">Событие с указанным идентификатором не найдено.</response>
         /// <response code="409">На событии нет свободных мест.</response>
         /// <response code="500">Не удалось сохранить бронь.</response>
         [HttpPost("{id}/book")]
         [ProducesResponseType(typeof(BookingInfo), StatusCodes.Status202Accepted)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
@@ -119,11 +129,13 @@ namespace EventManager.Api.Controllers
         /// <response code="200">Возвращает обновлённое событие.</response>
         /// <response code="400">Переданы невалидные данные события.</response>
         /// <response code="404">Событие с указанным идентификатором не найдено.</response>
+        /// <response code="500">Не удалось сохранить событие.</response>
         [HttpPut("{id}")]
         [Consumes("application/json")]
         [ProducesResponseType(typeof(EventDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> UpdateEvent(Guid id, [FromBody] UpdateEventDto dto, CancellationToken cancellationToken = default)
         {
             ServiceResult<EventDto> result = await eventService.UpdateEventAsync(id, dto, cancellationToken);
@@ -136,10 +148,14 @@ namespace EventManager.Api.Controllers
         /// <param name="id">Идентификатор удаляемого события.</param>
         /// <param name="cancellationToken">Токен отмены HTTP-запроса.</param>
         /// <response code="204">Событие успешно удалено. Тело ответа отсутствует.</response>
+        /// <response code="400">Передан невалидный идентификатор события.</response>
         /// <response code="404">Событие с указанным идентификатором не найдено.</response>
+        /// <response code="500">Не удалось удалить событие.</response>
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> DeleteEvent(Guid id, CancellationToken cancellationToken = default)
         {
             ServiceResult result = await eventService.DeleteEventAsync(id, cancellationToken);
