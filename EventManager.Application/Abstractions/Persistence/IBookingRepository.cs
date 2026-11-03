@@ -1,6 +1,6 @@
 using EventManager.Domain.Entities;
 
-namespace EventManager.Api.DataAccess.Repositories
+namespace EventManager.Application.Abstractions.Persistence
 {
     /// <summary>Предоставляет необходимые сценариям операции доступа к бронированиям без сохранения изменений.</summary>
     public interface IBookingRepository

@@ -1,8 +1,9 @@
 using EventManager.Api.DataAccess;
 using EventManager.Domain.Entities;
-using EventManager.Api.Services;
+using EventManager.Application.Services;
 using EventManager.Api.BackgroundServices;
 using EventManager.Api.Extensions;
+using EventManager.Application.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,6 +28,7 @@ namespace EventManager.Api.Tests.Services
             });
             services.AddLogging();
             services.AddRepositories();
+            services.AddApplication();
             services.AddServices();
 
             if (processingDelay is not null)

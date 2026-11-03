@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using EventManager.Domain.Entities;
 
-namespace EventManager.Api.Models.Dtos
+namespace EventManager.Application.Models.Dtos
 {
     /// <summary>
     /// Представляет данные запроса на полное обновление события.

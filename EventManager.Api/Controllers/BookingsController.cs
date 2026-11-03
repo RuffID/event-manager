@@ -1,7 +1,7 @@
 using EventManager.Api.Extensions;
-using EventManager.Api.Models.Dtos;
-using EventManager.Api.Models.Results;
-using EventManager.Api.Services;
+using EventManager.Application.Models.Dtos;
+using EventManager.Application.Models.Results;
+using EventManager.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EventManager.Api.Controllers

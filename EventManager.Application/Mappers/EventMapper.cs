@@ -1,7 +1,7 @@
 using EventManager.Domain.Entities;
-using EventManager.Api.Models.Dtos;
+using EventManager.Application.Models.Dtos;
 
-namespace EventManager.Api.Mappers
+namespace EventManager.Application.Mappers
 {
     /// <summary>
     /// Содержит методы преобразования сущностей событий и DTO.

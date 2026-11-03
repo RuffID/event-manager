@@ -1,3 +1,4 @@
+using EventManager.Application.Abstractions.Persistence;
 using EventManager.Domain.Entities;
 using EventManager.Domain.Enums;
 using Microsoft.EntityFrameworkCore;

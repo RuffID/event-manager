@@ -1,11 +1,12 @@
+using EventManager.Application.Abstractions.Persistence;
 using EventManager.Api.BackgroundServices;
 using EventManager.Api.DataAccess;
 using EventManager.Api.DataAccess.Repositories;
 using EventManager.Api.Extensions;
 using EventManager.Domain.Entities;
 using EventManager.Domain.Enums;
-using EventManager.Api.Models.Dtos;
-using EventManager.Api.Models.Results;
+using EventManager.Application.Models.Dtos;
+using EventManager.Application.Models.Results;
 using EventManager.Api.Tests.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;

@@ -1,4 +1,4 @@
-namespace EventManager.Api.Models.Results
+namespace EventManager.Application.Models.Results
 {
     /// <summary>
     /// Представляет описание ошибки, возникшей при выполнении операции сервиса.
@@ -17,7 +17,9 @@ namespace EventManager.Api.Models.Results
         public ServiceError(ServiceErrorType type, string message)
         {
             if (string.IsNullOrWhiteSpace(message))
+            {
                 throw new ArgumentException("Error message must not be empty.", nameof(message));
+            }
 
             Type = type;
             Message = message;

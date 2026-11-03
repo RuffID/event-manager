@@ -1,3 +1,5 @@
+using EventManager.Application.Abstractions.Persistence;
+
 namespace EventManager.Api.DataAccess
 {
     /// <summary>Сохраняет изменения общего scoped-контекста, которым владеет DI.</summary>

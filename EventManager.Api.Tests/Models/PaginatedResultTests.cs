@@ -1,5 +1,5 @@
 using System.Text.Json;
-using EventManager.Api.Models.Dtos;
+using EventManager.Application.Models.Dtos;
 using Xunit;
 
 namespace EventManager.Api.Tests.Models

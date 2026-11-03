@@ -1,3 +1,4 @@
+using EventManager.Application.Abstractions.Persistence;
 using EventManager.Api.DataAccess;
 using EventManager.Api.DataAccess.Repositories;
 using EventManager.Api.IntegrationTests.Infrastructure;

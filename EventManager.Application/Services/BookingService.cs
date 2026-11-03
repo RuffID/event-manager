@@ -1,12 +1,11 @@
 using EventManager.Domain.Exceptions;
-using EventManager.Api.Mappers;
+using EventManager.Application.Mappers;
 using EventManager.Domain.Entities;
-using EventManager.Api.Models.Dtos;
-using EventManager.Api.Models.Results;
-using EventManager.Api.DataAccess;
-using EventManager.Api.DataAccess.Repositories;
+using EventManager.Application.Models.Dtos;
+using EventManager.Application.Models.Results;
+using EventManager.Application.Abstractions.Persistence;
 
-namespace EventManager.Api.Services
+namespace EventManager.Application.Services
 {
     /// <summary>
     /// Реализует операции создания и получения бронирований.

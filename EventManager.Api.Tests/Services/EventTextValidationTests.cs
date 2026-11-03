@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using EventManager.Domain.Entities;
-using EventManager.Api.Models.Dtos;
-using EventManager.Api.Models.Results;
+using EventManager.Application.Models.Dtos;
+using EventManager.Application.Models.Results;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 

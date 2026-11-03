@@ -1,7 +1,7 @@
-using EventManager.Api.Models.Dtos;
-using EventManager.Api.Models.Results;
+using EventManager.Application.Models.Dtos;
+using EventManager.Application.Models.Results;
 
-namespace EventManager.Api.Services
+namespace EventManager.Application.Services
 {
     /// <summary>
     /// Определяет операции для работы с событиями.

@@ -1,8 +1,8 @@
 using EventManager.Domain.Entities;
 using EventManager.Domain.Enums;
-using EventManager.Api.Models.Dtos;
+using EventManager.Application.Models.Dtos;
 
-namespace EventManager.Api.Mappers
+namespace EventManager.Application.Mappers
 {
     /// <summary>
     /// Содержит методы преобразования сущностей бронирований и DTO.

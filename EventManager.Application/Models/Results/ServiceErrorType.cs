@@ -1,4 +1,4 @@
-namespace EventManager.Api.Models.Results
+namespace EventManager.Application.Models.Results
 {
     /// <summary>
     /// Определяет категорию ожидаемой ошибки сервисного слоя.

@@ -1,4 +1,4 @@
-namespace EventManager.Api.Models.Dtos
+namespace EventManager.Application.Models.Dtos
 {
     /// <summary>
     /// Представляет страницу событий и сведения о пагинации.

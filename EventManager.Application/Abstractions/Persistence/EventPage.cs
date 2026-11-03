@@ -1,6 +1,6 @@
 using EventManager.Domain.Entities;
 
-namespace EventManager.Api.DataAccess.Repositories
+namespace EventManager.Application.Abstractions.Persistence
 {
     /// <summary>Содержит материализованную страницу событий и количество записей до пагинации.</summary>
     /// <param name="Items">Сущности текущей страницы без отслеживания.</param>

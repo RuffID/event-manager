@@ -1,6 +1,7 @@
 using EventManager.Api.DataAccess;
 using EventManager.Api.Extensions;
 using EventManager.Api.Middlewares;
+using EventManager.Application.Extensions;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 
@@ -28,6 +29,7 @@ builder.Services.AddSwaggerGen(options =>
 
 // Внедрение зависимостей для сервисов
 builder.Services.AddDataAccess(builder.Configuration);
+builder.Services.AddApplication();
 builder.Services.AddServices();
 
 var app = builder.Build();

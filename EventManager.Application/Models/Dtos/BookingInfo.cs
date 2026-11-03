@@ -1,6 +1,6 @@
 using EventManager.Domain.Enums;
 
-namespace EventManager.Api.Models.Dtos
+namespace EventManager.Application.Models.Dtos
 {
     /// <summary>
     /// Представляет данные брони, возвращаемые клиенту API.

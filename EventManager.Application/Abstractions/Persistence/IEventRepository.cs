@@ -1,6 +1,6 @@
 using EventManager.Domain.Entities;
 
-namespace EventManager.Api.DataAccess.Repositories
+namespace EventManager.Application.Abstractions.Persistence
 {
     /// <summary>Предоставляет необходимые сценариям операции доступа к событиям без сохранения изменений.</summary>
     public interface IEventRepository

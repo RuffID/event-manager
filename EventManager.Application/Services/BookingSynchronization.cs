@@ -1,4 +1,4 @@
-namespace EventManager.Api.Services
+namespace EventManager.Application.Services
 {
     /// <summary>Синхронизирует резервирование и возврат мест между контекстами внутри процесса.</summary>
     internal static class BookingSynchronization

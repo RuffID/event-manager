@@ -1,4 +1,4 @@
-namespace EventManager.Api.Models.Results
+namespace EventManager.Application.Models.Results
 {
     /// <summary>
     /// Представляет результат операции сервиса с данными в ответе.
