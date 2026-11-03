@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin\**;obj\**;artifacts\**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EventManager.Domain\EventManager.Domain.csproj" />
+  </ItemGroup>
+
+</Project>
