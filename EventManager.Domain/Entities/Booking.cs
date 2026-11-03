@@ -1,4 +1,6 @@
-namespace EventManager.Api.Models
+using EventManager.Domain.Enums;
+
+namespace EventManager.Domain.Entities
 {
     /// <summary>
     /// Представляет бронь на событие.
@@ -89,7 +91,9 @@ namespace EventManager.Api.Models
             }
         }
 
-        internal (BookingStatus Status, DateTime? ProcessedAt) GetProcessingState()
+        /// <summary>Получает согласованный снимок статуса и времени обработки под одной блокировкой.</summary>
+        /// <returns>Копия состояния обработки, изменение которой не влияет на бронь.</returns>
+        public (BookingStatus Status, DateTime? ProcessedAt) GetProcessingState()
         {
             lock (_stateLock)
             {

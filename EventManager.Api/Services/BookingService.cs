@@ -1,6 +1,6 @@
-using EventManager.Api.Exceptions;
+using EventManager.Domain.Exceptions;
 using EventManager.Api.Mappers;
-using EventManager.Api.Models;
+using EventManager.Domain.Entities;
 using EventManager.Api.Models.Dtos;
 using EventManager.Api.Models.Results;
 using EventManager.Api.DataAccess;

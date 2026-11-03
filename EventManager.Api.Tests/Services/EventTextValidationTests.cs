@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using EventManager.Api.Models;
+using EventManager.Domain.Entities;
 using EventManager.Api.Models.Dtos;
 using EventManager.Api.Models.Results;
 using Microsoft.EntityFrameworkCore;

@@ -1,5 +1,5 @@
 using EventManager.Api.DataAccess;
-using EventManager.Api.Models;
+using EventManager.Domain.Entities;
 using Xunit;
 
 namespace EventManager.Api.IntegrationTests.Infrastructure;

@@ -1,11 +1,11 @@
 using EventManager.Api.Models.Dtos;
-using EventManager.Api.Models;
+using EventManager.Domain.Entities;
 using EventManager.Api.Models.Results;
 using EventManager.Api.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using EventManager.Api.Services;
 using Xunit;
-using Event = EventManager.Api.Models.Event;
+using Event = EventManager.Domain.Entities.Event;
 
 namespace EventManager.Api.Tests.Services
 {

@@ -1,4 +1,5 @@
-using EventManager.Api.Models;
+using EventManager.Domain.Entities;
+using EventManager.Domain.Enums;
 using EventManager.Api.DataAccess;
 using EventManager.Api.DataAccess.Repositories;
 using EventManager.Api.Services;

@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace EventManager.Api.Models
+namespace EventManager.Domain.Entities
 {
     /// <summary>
     /// Представляет событие, хранимое в приложении.

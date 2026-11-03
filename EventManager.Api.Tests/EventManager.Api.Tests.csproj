@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\EventManager.Domain\EventManager.Domain.csproj" />
     <ProjectReference Include="..\EventManager.Api\EventManager.Api.csproj" />
   </ItemGroup>
 

@@ -1,3 +1,5 @@
+using EventManager.Domain.Enums;
+
 namespace EventManager.Api.Models.Dtos
 {
     /// <summary>

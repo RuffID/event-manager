@@ -1,4 +1,4 @@
-using EventManager.Api.Exceptions;
+using EventManager.Domain.Exceptions;
 using EventManager.Api.Middlewares;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;

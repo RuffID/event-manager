@@ -1,4 +1,4 @@
-namespace EventManager.Api.Exceptions
+namespace EventManager.Domain.Exceptions
 {
     /// <summary>
     /// Представляет ошибку бронирования события без доступных мест.

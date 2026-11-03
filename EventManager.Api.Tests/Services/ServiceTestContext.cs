@@ -1,5 +1,5 @@
 using EventManager.Api.DataAccess;
-using EventManager.Api.Models;
+using EventManager.Domain.Entities;
 using EventManager.Api.Services;
 using EventManager.Api.BackgroundServices;
 using EventManager.Api.Extensions;

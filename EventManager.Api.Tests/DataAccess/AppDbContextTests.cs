@@ -1,5 +1,6 @@
 using EventManager.Api.DataAccess;
-using EventManager.Api.Models;
+using EventManager.Domain.Entities;
+using EventManager.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Xunit;

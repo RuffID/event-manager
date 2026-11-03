@@ -1,4 +1,5 @@
-using EventManager.Api.Models;
+using EventManager.Domain.Entities;
+using EventManager.Domain.Enums;
 using EventManager.Api.Models.Dtos;
 
 namespace EventManager.Api.Mappers

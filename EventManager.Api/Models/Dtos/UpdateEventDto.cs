@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using EventManager.Domain.Entities;
 
 namespace EventManager.Api.Models.Dtos
 {

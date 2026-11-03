@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Xunit;
-using Event = EventManager.Api.Models.Event;
+using Event = EventManager.Domain.Entities.Event;
 
 namespace EventManager.Api.Tests.Models
 {

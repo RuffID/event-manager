@@ -1,5 +1,6 @@
 using EventManager.Api.BackgroundServices;
-using EventManager.Api.Models;
+using EventManager.Domain.Entities;
+using EventManager.Domain.Enums;
 using EventManager.Api.Tests.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

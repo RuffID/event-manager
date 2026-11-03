@@ -1,4 +1,4 @@
-namespace EventManager.Api.Models
+namespace EventManager.Domain.Enums
 {
     /// <summary>
     /// Определяет состояние бронирования.

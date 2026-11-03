@@ -1,4 +1,5 @@
-using EventManager.Api.Models;
+using EventManager.Domain.Entities;
+using EventManager.Domain.Enums;
 using Xunit;
 
 namespace EventManager.Api.Tests.Models

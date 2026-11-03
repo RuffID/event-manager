@@ -1,4 +1,4 @@
-using EventManager.Api.Models;
+using EventManager.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace EventManager.Api.DataAccess.Repositories
