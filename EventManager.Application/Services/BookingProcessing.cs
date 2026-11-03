@@ -16,6 +16,16 @@ namespace EventManager.Application.Services
         IUnitOfWork unitOfWork,
         ILogger<BookingProcessing> logger)
     {
+        /// <summary>Получает материализованные идентификаторы ожидающих бронирований в текущей единице работы.</summary>
+        /// <param name="cancellationToken">Токен отмены выборки.</param>
+        /// <returns>Идентификаторы, доступные после освобождения текущего scope.</returns>
+        public Task<IReadOnlyList<Guid>> GetPendingBookingIdsAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            return bookingRepository.GetPendingIdsAsync(cancellationToken);
+        }
+
         /// <summary>Повторно проверяет состояние брони, подтверждает или отклоняет её и сохраняет результат.</summary>
         /// <param name="bookingId">Идентификатор брони.</param>
         /// <param name="cancellationToken">Токен отмены операции.</param>

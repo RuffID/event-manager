@@ -1,6 +1,6 @@
 using EventManager.Application.Abstractions.Persistence;
 
-namespace EventManager.Api.Tests.Services;
+namespace EventManager.Application.Tests.Services;
 
 internal class RecordingUnitOfWork : IUnitOfWork
 {

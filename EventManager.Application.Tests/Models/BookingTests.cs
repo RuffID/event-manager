@@ -2,7 +2,7 @@ using EventManager.Domain.Entities;
 using EventManager.Domain.Enums;
 using Xunit;
 
-namespace EventManager.Api.Tests.Models
+namespace EventManager.Application.Tests.Models
 {
     public class BookingTests
     {

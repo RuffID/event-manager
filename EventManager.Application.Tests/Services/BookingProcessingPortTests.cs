@@ -4,10 +4,61 @@ using EventManager.Domain.Enums;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
-namespace EventManager.Api.Tests.Services;
+namespace EventManager.Application.Tests.Services;
 
 public class BookingProcessingPortTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GetPendingBookingIds_ReturnsSelectionWithCallerTokenWithoutSaving(bool empty)
+    {
+        // Arrange
+        List<Guid> expectedIds = [];
+        if (!empty)
+        {
+            expectedIds.Add(Guid.NewGuid());
+            expectedIds.Add(Guid.NewGuid());
+        }
+
+        RecordingBookingRepository bookings = new RecordingBookingRepository { PendingIds = expectedIds };
+        RecordingEventRepository events = new RecordingEventRepository();
+        RecordingUnitOfWork work = new RecordingUnitOfWork();
+        BookingProcessing processing = CreateProcessing(bookings, events, work);
+        using CancellationTokenSource cancellation = new CancellationTokenSource();
+
+        // Act
+        IReadOnlyList<Guid> actualIds = await processing.GetPendingBookingIdsAsync(cancellation.Token);
+
+        // Assert
+        Assert.Equal(expectedIds, actualIds);
+        Assert.Equal(("pending", Guid.Empty, cancellation.Token), Assert.Single(bookings.Calls));
+        Assert.Empty(events.Calls);
+        Assert.Empty(work.SavedTokens);
+    }
+
+    [Fact]
+    public async Task GetPendingBookingIds_StopsBeforeReadingWhenCancelled()
+    {
+        // Arrange
+        RecordingBookingRepository bookings = new RecordingBookingRepository { PendingIds = [] };
+        RecordingEventRepository events = new RecordingEventRepository();
+        RecordingUnitOfWork work = new RecordingUnitOfWork();
+        BookingProcessing processing = CreateProcessing(bookings, events, work);
+        using CancellationTokenSource cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        // Act
+        Func<Task> action = () => processing.GetPendingBookingIdsAsync(cancellation.Token);
+
+        // Assert
+        OperationCanceledException exception = await Assert.ThrowsAsync<OperationCanceledException>(action);
+        Assert.Equal(cancellation.Token, exception.CancellationToken);
+        Assert.Empty(bookings.Calls);
+        Assert.Empty(events.Calls);
+        Assert.Empty(work.SavedTokens);
+    }
+
     [Theory]
     [InlineData(true, BookingStatus.Confirmed)]
     [InlineData(false, BookingStatus.Rejected)]

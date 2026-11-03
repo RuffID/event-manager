@@ -1,5 +1,5 @@
 using EventManager.Api.BackgroundServices;
-using EventManager.Api.DataAccess;
+using EventManager.Infrastructure.DataAccess;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 

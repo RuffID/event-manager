@@ -1,5 +1,5 @@
 using EventManager.Api.BackgroundServices;
-using EventManager.Api.DataAccess;
+using EventManager.Infrastructure.DataAccess;
 using EventManager.Domain.Entities;
 using EventManager.Domain.Enums;
 using EventManager.Application.Models.Dtos;

@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Xunit;
 using Event = EventManager.Domain.Entities.Event;
 
-namespace EventManager.Api.Tests.Models
+namespace EventManager.Application.Tests.Models
 {
     public class EventTests
     {

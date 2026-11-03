@@ -1,12 +1,13 @@
 using EventManager.Application.Abstractions.Persistence;
 using EventManager.Domain.Entities;
 
-namespace EventManager.Api.Tests.Services;
+namespace EventManager.Application.Tests.Services;
 
 internal class RecordingBookingRepository : IBookingRepository
 {
     public Booking? Booking { get; set; }
     public Booking? Added { get; private set; }
+    public IReadOnlyList<Guid>? PendingIds { get; set; }
     public List<(string Operation, Guid Id, CancellationToken Token)> Calls { get; } = [];
 
     public Task<Booking?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
@@ -25,7 +26,14 @@ internal class RecordingBookingRepository : IBookingRepository
 
     public Task<IReadOnlyList<Guid>> GetPendingIdsAsync(CancellationToken cancellationToken)
     {
-        throw new NotSupportedException("The scenario must not enumerate pending bookings.");
+        if (PendingIds is null)
+        {
+            throw new NotSupportedException("The scenario must not enumerate pending bookings.");
+        }
+
+        Calls.Add(("pending", Guid.Empty, cancellationToken));
+
+        return Task.FromResult(PendingIds);
     }
 
     public void Add(Booking booking)

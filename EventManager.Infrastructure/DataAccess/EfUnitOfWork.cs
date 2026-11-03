@@ -1,4 +1,3 @@
-using EventManager.Api.DataAccess;
 using EventManager.Application.Abstractions.Persistence;
 
 namespace EventManager.Infrastructure.DataAccess

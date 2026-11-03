@@ -1,7 +1,7 @@
 using EventManager.Application.Models.Results;
 using Xunit;
 
-namespace EventManager.Api.Tests.Models
+namespace EventManager.Application.Tests.Models
 {
     public class ServiceResultTests
     {

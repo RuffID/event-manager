@@ -1,4 +1,3 @@
-using EventManager.Api.DataAccess;
 using EventManager.Infrastructure.DataAccess;
 using EventManager.Domain.Entities;
 using Xunit;

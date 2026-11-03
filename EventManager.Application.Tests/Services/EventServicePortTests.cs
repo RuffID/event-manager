@@ -3,9 +3,10 @@ using EventManager.Application.Models.Dtos;
 using EventManager.Application.Models.Results;
 using EventManager.Application.Services;
 using EventManager.Domain.Entities;
+using System.ComponentModel.DataAnnotations;
 using Xunit;
 
-namespace EventManager.Api.Tests.Services;
+namespace EventManager.Application.Tests.Services;
 
 public class EventServicePortTests
 {
@@ -228,6 +229,153 @@ public class EventServicePortTests
         Assert.Equal(("Original", existing.StartAt, existing.EndAt, 2, 3), events.PageArguments);
         Assert.Equal(new[] { ("read", existing.Id, cancellation.Token), ("page", Guid.Empty, cancellation.Token) }, events.Calls);
         Assert.Empty(work.SavedTokens);
+    }
+
+    [Theory]
+    [InlineData("title")]
+    [InlineData("description")]
+    [InlineData("start")]
+    public async Task UpdateEvent_MapsDomainValidationFailureWithoutChangingEntityOrSaving(string invalidField)
+    {
+        // Arrange
+        Event existing = CreateEvent();
+        Assert.True(existing.TryReserveSeats());
+        DateTime originalStartAt = existing.StartAt;
+        DateTime originalEndAt = existing.EndAt;
+        UpdateEventDto input = UpdateInput(existing);
+        RecordingEventRepository events = new RecordingEventRepository { Event = existing };
+        // Вызывает доменный отказ после предварительных проверок без ожидания реального времени.
+        events.BeforeReturningTrackedEvent = () =>
+        {
+            if (invalidField == "title")
+            {
+                input.Title = new string('A', Event.MAX_TITLE_LENGTH + 1);
+            }
+            else if (invalidField == "description")
+            {
+                input.Description = new string('B', Event.MAX_DESCRIPTION_LENGTH + 1);
+            }
+            else
+            {
+                input.StartAt = DateTime.UtcNow.AddDays(-1);
+                input.EndAt = input.StartAt.Value.AddHours(2);
+            }
+        };
+        RecordingUnitOfWork work = new RecordingUnitOfWork();
+        EventService service = new EventService(events, work);
+
+        // Act
+        ServiceResult<EventDto> result = await service.UpdateEventAsync(existing.Id, input,
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Null(result.Data);
+        ServiceError error = Assert.IsType<ServiceError>(result.Error);
+        Assert.Equal(ServiceErrorType.Validation, error.Type);
+        if (invalidField == "title")
+        {
+            Assert.Equal("Event title must not exceed 200 characters.", error.Message);
+        }
+        else if (invalidField == "description")
+        {
+            Assert.Equal("Event description must not exceed 2000 characters.", error.Message);
+        }
+        else
+        {
+            Assert.Equal("Event cannot start in the past.", error.Message);
+        }
+
+        Assert.Equal("Original", existing.Title);
+        Assert.Null(existing.Description);
+        Assert.Equal(originalStartAt, existing.StartAt);
+        Assert.Equal(originalEndAt, existing.EndAt);
+        Assert.Equal(2, existing.TotalSeats);
+        Assert.Equal(1, existing.AvailableSeats);
+        Assert.Empty(work.SavedTokens);
+        Assert.Null(events.Added);
+        Assert.Null(events.Removed);
+    }
+
+    [Theory]
+    [InlineData("create")]
+    [InlineData("update")]
+    public async Task ValidationExceptionFromSave_IsNotTreatedAsDomainInputFailure(string operation)
+    {
+        // Arrange
+        Event existing = CreateEvent();
+        RecordingEventRepository events = new RecordingEventRepository { Event = existing };
+        ValidationException failure = new ValidationException("Storage validation failed.");
+        RecordingUnitOfWork work = new RecordingUnitOfWork { SaveError = failure };
+        EventService service = new EventService(events, work);
+        using CancellationTokenSource cancellation = new CancellationTokenSource();
+        Func<Task> action;
+        if (operation == "create")
+        {
+            action = () => service.CreateEventAsync(CreateInput(), cancellation.Token);
+        }
+        else
+        {
+            action = () => service.UpdateEventAsync(existing.Id, UpdateInput(existing), cancellation.Token);
+        }
+
+        // Act
+        Exception? exception = await Record.ExceptionAsync(action);
+
+        // Assert
+        Assert.Same(failure, exception);
+        Assert.Equal(cancellation.Token, Assert.Single(work.SavedTokens));
+    }
+
+    [Theory]
+    [InlineData("title", ServiceErrorType.Validation)]
+    [InlineData("dates", ServiceErrorType.Validation)]
+    [InlineData("interval", ServiceErrorType.Validation)]
+    [InlineData("past", ServiceErrorType.NotFound)]
+    public async Task UpdateMissingEvent_PreservesValidationAndNotFoundPrecedence(
+        string invalidField, ServiceErrorType expectedError)
+    {
+        // Arrange
+        RecordingEventRepository events = new RecordingEventRepository();
+        RecordingUnitOfWork work = new RecordingUnitOfWork();
+        EventService service = new EventService(events, work);
+        UpdateEventDto input = UpdateInput(CreateEvent());
+        if (invalidField == "title")
+        {
+            input.Title = " ";
+        }
+        else if (invalidField == "dates")
+        {
+            input.StartAt = null;
+        }
+        else if (invalidField == "interval")
+        {
+            input.EndAt = input.StartAt;
+        }
+        else
+        {
+            input.StartAt = DateTime.UtcNow.AddDays(-1);
+            input.EndAt = input.StartAt.Value.AddHours(2);
+        }
+
+        Guid missingId = Guid.NewGuid();
+        using CancellationTokenSource cancellation = new CancellationTokenSource();
+
+        // Act
+        ServiceResult<EventDto> result = await service.UpdateEventAsync(missingId, input, cancellation.Token);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal(expectedError, Assert.IsType<ServiceError>(result.Error).Type);
+        Assert.Empty(work.SavedTokens);
+        if (expectedError == ServiceErrorType.NotFound)
+        {
+            Assert.Equal(("update", missingId, cancellation.Token), Assert.Single(events.Calls));
+        }
+        else
+        {
+            Assert.Empty(events.Calls);
+        }
     }
 
     private static CreateEventDto CreateInput()

@@ -1,4 +1,4 @@
-using EventManager.Api.DataAccess;
+using EventManager.Infrastructure.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 

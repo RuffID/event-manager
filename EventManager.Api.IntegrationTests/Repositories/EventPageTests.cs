@@ -1,5 +1,5 @@
 using EventManager.Application.Abstractions.Persistence;
-using EventManager.Api.DataAccess;
+using EventManager.Infrastructure.DataAccess;
 using EventManager.Infrastructure.DataAccess.Repositories;
 using EventManager.Api.IntegrationTests.Infrastructure;
 using EventManager.Domain.Entities;

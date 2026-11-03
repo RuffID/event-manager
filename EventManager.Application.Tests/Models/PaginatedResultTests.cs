@@ -2,7 +2,7 @@ using System.Text.Json;
 using EventManager.Application.Models.Dtos;
 using Xunit;
 
-namespace EventManager.Api.Tests.Models
+namespace EventManager.Application.Tests.Models
 {
     public class PaginatedResultTests
     {

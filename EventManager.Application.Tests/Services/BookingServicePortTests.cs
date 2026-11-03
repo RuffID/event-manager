@@ -6,7 +6,7 @@ using EventManager.Domain.Enums;
 using EventManager.Domain.Exceptions;
 using Xunit;
 
-namespace EventManager.Api.Tests.Services;
+namespace EventManager.Application.Tests.Services;
 
 public class BookingServicePortTests
 {

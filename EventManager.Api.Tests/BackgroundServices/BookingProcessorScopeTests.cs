@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using EventManager.Api.BackgroundServices;
-using EventManager.Api.DataAccess;
+using EventManager.Infrastructure.DataAccess;
 using EventManager.Api.Tests.Services;
 using EventManager.Domain.Entities;
 using EventManager.Domain.Enums;

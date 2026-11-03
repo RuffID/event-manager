@@ -1,6 +1,6 @@
 using EventManager.Application.Abstractions.Persistence;
 using EventManager.Api.BackgroundServices;
-using EventManager.Api.DataAccess;
+using EventManager.Infrastructure.DataAccess;
 using EventManager.Infrastructure.DataAccess.Repositories;
 using EventManager.Infrastructure.Extensions;
 using EventManager.Api.Extensions;

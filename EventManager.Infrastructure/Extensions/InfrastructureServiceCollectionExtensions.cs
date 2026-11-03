@@ -1,6 +1,5 @@
-using EventManager.Api.DataAccess;
-using EventManager.Application.Abstractions.Persistence;
 using EventManager.Infrastructure.DataAccess;
+using EventManager.Application.Abstractions.Persistence;
 using EventManager.Infrastructure.DataAccess.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;

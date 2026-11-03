@@ -1,7 +1,7 @@
 using EventManager.Application.Models.Dtos;
 using EventManager.Domain.Entities;
 using EventManager.Application.Models.Results;
-using EventManager.Api.DataAccess;
+using EventManager.Infrastructure.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using EventManager.Application.Services;
 using Xunit;

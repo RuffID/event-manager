@@ -3,6 +3,7 @@ using EventManager.Domain.Entities;
 using EventManager.Application.Models.Dtos;
 using EventManager.Application.Models.Results;
 using EventManager.Application.Abstractions.Persistence;
+using System.ComponentModel.DataAnnotations;
 
 namespace EventManager.Application.Services
 {
@@ -89,7 +90,15 @@ namespace EventManager.Application.Services
                 return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "The total number of seats must be greater than zero.");
             }
 
-            Event @event = dto.ToEvent();
+            Event @event;
+            try
+            {
+                @event = dto.ToEvent();
+            }
+            catch (ValidationException exception)
+            {
+                return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, exception.Message);
+            }
 
             eventRepository.Add(@event);
             await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -137,7 +146,16 @@ namespace EventManager.Application.Services
                 return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, "Event cannot start in the past.");
             }
 
-            Event updatedEvent = dto.ToEvent(@event);
+            Event updatedEvent;
+            try
+            {
+                updatedEvent = dto.ToEvent(@event);
+            }
+            catch (ValidationException exception)
+            {
+                return ServiceResult<EventDto>.Fail(ServiceErrorType.Validation, exception.Message);
+            }
+
             await unitOfWork.SaveChangesAsync(cancellationToken);
 
             return ServiceResult<EventDto>.Succeed(updatedEvent.ToDto());

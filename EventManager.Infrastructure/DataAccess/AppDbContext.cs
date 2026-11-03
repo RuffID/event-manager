@@ -1,7 +1,7 @@
 using EventManager.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace EventManager.Api.DataAccess
+namespace EventManager.Infrastructure.DataAccess
 {
     /// <summary>Предоставляет доступ к событиям и бронированиям в базе данных.</summary>
     public class AppDbContext : DbContext

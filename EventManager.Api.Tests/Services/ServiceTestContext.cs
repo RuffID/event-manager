@@ -1,4 +1,4 @@
-using EventManager.Api.DataAccess;
+using EventManager.Infrastructure.DataAccess;
 using EventManager.Domain.Entities;
 using EventManager.Application.Services;
 using EventManager.Api.BackgroundServices;

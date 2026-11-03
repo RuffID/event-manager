@@ -4,5 +4,6 @@
   <Project Path="EventManager.Application/EventManager.Application.csproj" />
   <Project Path="EventManager.Infrastructure/EventManager.Infrastructure.csproj" />
   <Project Path="EventManager.Api.Tests/EventManager.Api.Tests.csproj" />
+  <Project Path="EventManager.Application.Tests/EventManager.Application.Tests.csproj" />
   <Project Path="EventManager.Api.IntegrationTests/EventManager.Api.IntegrationTests.csproj" />
 </Solution>

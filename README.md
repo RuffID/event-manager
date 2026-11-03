@@ -10,7 +10,8 @@
 - `EventManager.Application` — действия с событиями и бронями, данные для запросов и ответов, интерфейсы работы с хранилищем.
 - `EventManager.Infrastructure` — работа с PostgreSQL. Контекст, настройки таблиц и миграции находятся в `DataAccess`.
 - `EventManager.Api` — HTTP-запросы, ответы, обработка ошибок и запуск приложения.
-- `EventManager.Api.Tests` — тесты без настоящей БД.
+- `EventManager.Application.Tests` — правила Domain и сценарии Application с подменами портов, без БД.
+- `EventManager.Api.Tests` — контроллеры, middleware, фоновая обработка и компонентные проверки с EF InMemory, без настоящей БД.
 - `EventManager.Api.IntegrationTests` — тесты с PostgreSQL в Docker.
 
 Application зависит от Domain, Infrastructure — от Application и Domain. API подключает остальные слои. Domain не зависит от других проектов.
@@ -52,8 +53,6 @@ dotnet ef migrations add NextMigration --project .\EventManager.Infrastructure\E
 ```
 
 Замените `NextMigration` названием изменения. Путь к настройкам передаётся абсолютным, поскольку EF меняет рабочую папку.
-
-В старых файлах миграций сохранены прежние имена сущностей. Проверка EF подтвердила, что текущая модель соответствует последней миграции. Применение всей цепочки на пустой БД ещё не проверялось.
 
 ## API
 
@@ -120,7 +119,13 @@ dotnet ef migrations add NextMigration --project .\EventManager.Infrastructure\E
 
 ## Тесты
 
-Тесты без настоящей БД:
+Правила Domain и сценарии Application с подменами зависимостей:
+
+```powershell
+dotnet test --project .\EventManager.Application.Tests\EventManager.Application.Tests.csproj
+```
+
+Контроллеры, middleware, фоновые адаптеры и компонентные проверки с InMemory:
 
 ```powershell
 dotnet test --project .\EventManager.Api.Tests\EventManager.Api.Tests.csproj

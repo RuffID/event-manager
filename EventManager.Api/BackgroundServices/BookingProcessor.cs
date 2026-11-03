@@ -1,4 +1,3 @@
-using EventManager.Application.Abstractions.Persistence;
 using EventManager.Application.Services;
 
 namespace EventManager.Api.BackgroundServices
@@ -28,8 +27,8 @@ namespace EventManager.Api.BackgroundServices
                 IReadOnlyList<Guid> pendingBookingIds;
                 await using (AsyncServiceScope scope = scopeFactory.CreateAsyncScope())
                 {
-                    IBookingRepository bookingRepository = scope.ServiceProvider.GetRequiredService<IBookingRepository>();
-                    pendingBookingIds = await bookingRepository.GetPendingIdsAsync(cancellationToken);
+                    BookingProcessing bookingProcessing = scope.ServiceProvider.GetRequiredService<BookingProcessing>();
+                    pendingBookingIds = await bookingProcessing.GetPendingBookingIdsAsync(cancellationToken);
                 }
 
                 IEnumerable<Task> processingTasks = pendingBookingIds.Select(bookingId =>

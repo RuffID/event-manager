@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace EventManager.Api.DataAccess.Migrations
+namespace EventManager.Infrastructure.DataAccess.Migrations
 {
     /// <inheritdoc />
     public partial class RenameColumnsToSnakeCase : Migration

@@ -1,7 +1,7 @@
 using EventManager.Application.Abstractions.Persistence;
 using EventManager.Domain.Entities;
 
-namespace EventManager.Api.Tests.Services;
+namespace EventManager.Application.Tests.Services;
 
 internal class RecordingEventRepository : IEventRepository
 {
@@ -9,6 +9,7 @@ internal class RecordingEventRepository : IEventRepository
     public EventPage Page { get; set; } = new EventPage([], 0);
     public Event? Added { get; private set; }
     public Event? Removed { get; private set; }
+    public Action? BeforeReturningTrackedEvent { get; set; }
     public List<(string Operation, Guid Id, CancellationToken Token)> Calls { get; } = [];
     public (string? Title, DateTime? From, DateTime? To, int Page, int PageSize)? PageArguments { get; private set; }
 
@@ -22,6 +23,7 @@ internal class RecordingEventRepository : IEventRepository
     public Task<Event?> GetByIdForUpdateAsync(Guid id, CancellationToken cancellationToken)
     {
         Calls.Add(("update", id, cancellationToken));
+        BeforeReturningTrackedEvent?.Invoke();
 
         return Task.FromResult(Event);
     }
