@@ -30,7 +30,7 @@ namespace EventManager.Api.Tests.Services
             services.AddLogging();
             services.AddRepositories();
             services.AddApplication();
-            services.AddServices();
+            services.AddBookingProcessingHosting();
 
             if (processingDelay is not null)
             {
