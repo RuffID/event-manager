@@ -1,6 +1,10 @@
 using EventManager.Api.BackgroundServices;
+using EventManager.Api.Swagger;
 using EventManager.Application.Models.Dtos;
+using EventManager.Domain.Enums;
+using Microsoft.OpenApi;
 using System.Reflection;
+using System.Text.Json.Serialization;
 
 namespace EventManager.Api.Extensions
 {
@@ -14,7 +18,10 @@ namespace EventManager.Api.Extensions
         /// <returns>Коллекция сервисов с регистрациями Presentation.</returns>
         public static IServiceCollection AddPresentation(this IServiceCollection services)
         {
-            services.AddControllers();
+            services.AddControllers().AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter<UserRole>());
+            });
 
             // Регистрирует Swagger и подключает XML-документацию API и Application.
             services.AddSwaggerGen(options =>
@@ -24,6 +31,18 @@ namespace EventManager.Api.Extensions
 
                 options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, apiXmlFileName));
                 options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, applicationXmlFileName));
+                options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT",
+                    Description = "Вставьте JWT из ответа POST /auth/login без префикса Bearer."
+                });
+                options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+                {
+                    [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+                });
+                options.OperationFilter<AuthorizationOperationFilter>();
             });
 
             return services;

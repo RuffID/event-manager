@@ -29,7 +29,8 @@ public class ControllerResultTests
         };
         BookingServiceStub bookings = new BookingServiceStub
         {
-            Result = ServiceResult<BookingInfo>.Fail(error, MESSAGE)
+            Result = ServiceResult<BookingInfo>.Fail(error, MESSAGE),
+            CancelResult = ServiceResult.Fail(error, MESSAGE)
         };
         EventsController eventController = new EventsController(events, bookings);
         BookingsController bookingController = new BookingsController(bookings);
@@ -46,7 +47,8 @@ public class ControllerResultTests
             await eventController.UpdateEvent(id, new UpdateEventDto(), cancellation.Token),
             await eventController.DeleteEvent(id, cancellation.Token),
             await eventController.CreateBooking(id, cancellation.Token),
-            await bookingController.GetBooking(id, cancellation.Token)
+            await bookingController.GetBooking(id, cancellation.Token),
+            await bookingController.CancelBooking(id, cancellation.Token)
         ];
 
         // Assert
@@ -60,7 +62,7 @@ public class ControllerResultTests
             Assert.Equal(MESSAGE, problem.Detail);
         });
         Assert.Equal(4, events.Tokens.Count);
-        Assert.Equal(2, bookings.Tokens.Count);
+        Assert.Equal(3, bookings.Tokens.Count);
         Assert.All(events.Tokens.Concat(bookings.Tokens), token => Assert.Equal(cancellation.Token, token));
     }
 
@@ -181,18 +183,58 @@ public class ControllerResultTests
         // Act
         IActionResult create = await events.CreateBooking(Guid.NewGuid(), TestContext.Current.CancellationToken);
         IActionResult read = await controller.GetBooking(Guid.NewGuid(), TestContext.Current.CancellationToken);
+        IActionResult cancel = await controller.CancelBooking(Guid.NewGuid(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.IsType<UnauthorizedResult>(create);
         Assert.IsType<UnauthorizedResult>(read);
+        Assert.IsType<UnauthorizedResult>(cancel);
         Assert.Empty(bookings.Tokens);
     }
 
-    private static Guid SetCurrentUser(ControllerBase controller)
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task BookingActions_ForwardUserIdAndAdminRole(bool isAdmin)
+    {
+        // Arrange
+        Guid bookingId = Guid.NewGuid();
+        BookingServiceStub service = new BookingServiceStub
+        {
+            Result = ServiceResult<BookingInfo>.Succeed(new BookingInfo { Id = bookingId }),
+            CancelResult = ServiceResult.Succeed()
+        };
+        BookingsController controller = new BookingsController(service);
+        Guid userId = SetCurrentUser(controller, isAdmin);
+        using CancellationTokenSource cancellation = new CancellationTokenSource();
+
+        // Act
+        IActionResult read = await controller.GetBooking(bookingId, cancellation.Token);
+        Guid readUserId = service.ReceivedUserId;
+        bool readIsAdmin = service.ReceivedIsAdmin;
+        IActionResult cancel = await controller.CancelBooking(bookingId, cancellation.Token);
+
+        // Assert
+        Assert.IsType<OkObjectResult>(read);
+        Assert.IsType<NoContentResult>(cancel);
+        Assert.Equal(userId, readUserId);
+        Assert.Equal(isAdmin, readIsAdmin);
+        Assert.Equal(bookingId, service.ReceivedId);
+        Assert.Equal(userId, service.ReceivedUserId);
+        Assert.Equal(isAdmin, service.ReceivedIsAdmin);
+        Assert.Equal(2, service.Tokens.Count);
+        Assert.All(service.Tokens, token => Assert.Equal(cancellation.Token, token));
+    }
+
+    private static Guid SetCurrentUser(ControllerBase controller, bool isAdmin = false)
     {
         Guid userId = Guid.NewGuid();
         ClaimsIdentity identity = new ClaimsIdentity(
-            [new Claim(ClaimTypes.NameIdentifier, userId.ToString())], "test");
+            [new Claim("sub", userId.ToString())], "test", "sub", "role");
+        if (isAdmin)
+        {
+            identity.AddClaim(new Claim("role", "Admin"));
+        }
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) }
@@ -258,9 +300,11 @@ public class ControllerResultTests
     private class BookingServiceStub : IBookingService
     {
         public ServiceResult<BookingInfo> Result { get; set; } = ServiceResult<BookingInfo>.Fail(ServiceErrorType.NotFound, "Missing.");
+        public ServiceResult CancelResult { get; set; } = ServiceResult.Fail(ServiceErrorType.NotFound, "Missing.");
         public List<CancellationToken> Tokens { get; } = [];
         public Guid ReceivedId { get; private set; }
         public Guid ReceivedUserId { get; private set; }
+        public bool ReceivedIsAdmin { get; private set; }
 
         public Task<ServiceResult<BookingInfo>> CreateBookingAsync(Guid eventId, Guid userId, CancellationToken cancellationToken = default)
         {
@@ -275,6 +319,7 @@ public class ControllerResultTests
         {
             ReceivedId = bookingId;
             ReceivedUserId = userId;
+            ReceivedIsAdmin = isAdmin;
             Tokens.Add(cancellationToken);
 
             return Task.FromResult(Result);
@@ -282,7 +327,12 @@ public class ControllerResultTests
 
         public Task<ServiceResult> CancelBookingAsync(Guid bookingId, Guid userId, bool isAdmin, CancellationToken cancellationToken = default)
         {
-            throw new NotSupportedException();
+            ReceivedId = bookingId;
+            ReceivedUserId = userId;
+            ReceivedIsAdmin = isAdmin;
+            Tokens.Add(cancellationToken);
+
+            return Task.FromResult(CancelResult);
         }
     }
 }

@@ -1,6 +1,7 @@
 using EventManager.Application.Models.Dtos;
 using EventManager.Application.Models.Results;
 using EventManager.Application.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using EventManager.Api.Extensions;
 using System.ComponentModel.DataAnnotations;
@@ -32,6 +33,7 @@ namespace EventManager.Api.Controllers
         /// <response code="400">Переданы невалидные параметры фильтрации или пагинации.</response>
         /// <response code="500">Не удалось обработать запрос.</response>
         [HttpGet]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(PaginatedResult), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
@@ -57,6 +59,7 @@ namespace EventManager.Api.Controllers
         /// <response code="404">Событие с указанным идентификатором не найдено.</response>
         /// <response code="500">Не удалось обработать запрос.</response>
         [HttpGet("{id}")]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(EventDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -68,7 +71,7 @@ namespace EventManager.Api.Controllers
         }
 
         /// <summary>
-        /// Создаёт новое событие.
+        /// Создаёт новое событие. Доступно только роли Admin.
         /// </summary>
         /// <param name="dto">Данные создаваемого события.</param>
         /// <param name="cancellationToken">Токен отмены HTTP-запроса.</param>
@@ -76,8 +79,11 @@ namespace EventManager.Api.Controllers
         /// <response code="400">Переданы невалидные данные события.</response>
         /// <response code="500">Не удалось сохранить событие.</response>
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         [Consumes("application/json")]
         [ProducesResponseType(typeof(EventDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CreateEvent([FromBody] CreateEventDto dto, CancellationToken cancellationToken = default)
@@ -103,6 +109,7 @@ namespace EventManager.Api.Controllers
         /// <response code="409">Нет свободных мест или достигнут лимит активных броней.</response>
         /// <response code="500">Не удалось сохранить бронь.</response>
         [HttpPost("{id}/book")]
+        [Authorize]
         [ProducesResponseType(typeof(BookingInfo), StatusCodes.Status202Accepted)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -128,7 +135,7 @@ namespace EventManager.Api.Controllers
         }
 
         /// <summary>
-        /// Полностью обновляет событие по идентификатору.
+        /// Полностью обновляет событие по идентификатору. Доступно только роли Admin.
         /// </summary>
         /// <param name="id">Идентификатор обновляемого события.</param>
         /// <param name="dto">Новые данные события.</param>
@@ -138,8 +145,11 @@ namespace EventManager.Api.Controllers
         /// <response code="404">Событие с указанным идентификатором не найдено.</response>
         /// <response code="500">Не удалось сохранить событие.</response>
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         [Consumes("application/json")]
         [ProducesResponseType(typeof(EventDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
@@ -150,7 +160,7 @@ namespace EventManager.Api.Controllers
         }
 
         /// <summary>
-        /// Удаляет событие по идентификатору.
+        /// Удаляет событие по идентификатору. Доступно только роли Admin.
         /// </summary>
         /// <param name="id">Идентификатор удаляемого события.</param>
         /// <param name="cancellationToken">Токен отмены HTTP-запроса.</param>
@@ -159,7 +169,10 @@ namespace EventManager.Api.Controllers
         /// <response code="404">Событие с указанным идентификатором не найдено.</response>
         /// <response code="500">Не удалось удалить событие.</response>
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
