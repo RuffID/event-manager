@@ -12,7 +12,7 @@ namespace EventManager.Api.Tests.Controllers
     public class AuthControllerTests
     {
         [Fact]
-        public async Task Register_ReturnsCreatedUserAndForwardsInput()
+        public async Task Register_ReturnsNoContentAndForwardsInput()
         {
             // Arrange
             UserInfo user = new UserInfo { Id = Guid.NewGuid(), Login = "student", Role = UserRole.Admin };
@@ -25,9 +25,8 @@ namespace EventManager.Api.Tests.Controllers
             IActionResult result = await controller.Register(input, cancellation.Token);
 
             // Assert
-            ObjectResult response = Assert.IsType<ObjectResult>(result);
-            Assert.Equal(StatusCodes.Status201Created, response.StatusCode);
-            Assert.Same(user, response.Value);
+            NoContentResult response = Assert.IsType<NoContentResult>(result);
+            Assert.Equal(StatusCodes.Status204NoContent, response.StatusCode);
             Assert.Same(input, service.RegisterInput);
             Assert.Equal(cancellation.Token, service.ReceivedToken);
         }
@@ -84,7 +83,7 @@ namespace EventManager.Api.Tests.Controllers
         private class UserServiceStub : IUserService
         {
             public ServiceResult<UserInfo> RegisterResult { get; set; } = ServiceResult<UserInfo>.Fail(ServiceErrorType.Conflict, "Login exists.");
-            public ServiceResult<TokenDto> LoginResult { get; set; } = ServiceResult<TokenDto>.Fail(ServiceErrorType.Unauthorized, "Invalid credentials.");
+            public ServiceResult<TokenDto> LoginResult { get; set; } = ServiceResult<TokenDto>.Fail(ServiceErrorType.Validation, "Invalid credentials.");
             public RegisterUserDto? RegisterInput { get; private set; }
             public LoginDto? LoginInput { get; private set; }
             public CancellationToken ReceivedToken { get; private set; }

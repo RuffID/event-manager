@@ -74,7 +74,7 @@ namespace EventManager.Application.Services
             const string INVALID_CREDENTIALS = "Invalid login or password.";
             if (string.IsNullOrWhiteSpace(dto.Login) || string.IsNullOrWhiteSpace(dto.Password))
             {
-                return ServiceResult<TokenDto>.Fail(ServiceErrorType.Unauthorized, INVALID_CREDENTIALS);
+                return ServiceResult<TokenDto>.Fail(ServiceErrorType.Validation, INVALID_CREDENTIALS);
             }
 
             User? user = await users.GetByLoginAsync(dto.Login.Trim(), cancellationToken);
@@ -82,14 +82,14 @@ namespace EventManager.Application.Services
             {
                 logger.LogWarning("Login rejected: invalid credentials.");
 
-                return ServiceResult<TokenDto>.Fail(ServiceErrorType.Unauthorized, INVALID_CREDENTIALS);
+                return ServiceResult<TokenDto>.Fail(ServiceErrorType.Validation, INVALID_CREDENTIALS);
             }
 
             if (!passwordHasher.Verify(dto.Password, user.PasswordHash))
             {
                 logger.LogWarning("Login rejected: invalid credentials.");
 
-                return ServiceResult<TokenDto>.Fail(ServiceErrorType.Unauthorized, INVALID_CREDENTIALS);
+                return ServiceResult<TokenDto>.Fail(ServiceErrorType.Validation, INVALID_CREDENTIALS);
             }
 
             string token = tokenGenerator.Generate(user);

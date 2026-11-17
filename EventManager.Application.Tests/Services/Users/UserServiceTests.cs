@@ -166,7 +166,7 @@ public class UserServiceTests
         Assert.False(wrong.Success);
         ServiceError first = Assert.IsType<ServiceError>(missing.Error);
         ServiceError second = Assert.IsType<ServiceError>(wrong.Error);
-        Assert.Equal(ServiceErrorType.Unauthorized, first.Type);
+        Assert.Equal(ServiceErrorType.Validation, first.Type);
         Assert.Equal(first.Type, second.Type);
         Assert.Equal(first.Message, second.Message);
         Assert.Null(missing.Data);

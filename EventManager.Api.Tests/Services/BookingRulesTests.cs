@@ -14,6 +14,115 @@ namespace EventManager.Api.Tests.Services;
 
 public class BookingRulesTests
 {
+    [Theory]
+    [InlineData(9)]
+    [InlineData(10)]
+    public async Task Create_LimitBoundaryCountsMixedActiveStatusesAndPreservesDataOnFailure(int activeCount)
+    {
+        // Arrange
+        using ServiceTestContext database = new ServiceTestContext();
+        Event existing = CreateEvent();
+        Guid userId = Guid.NewGuid();
+        List<Booking> bookings = [];
+        for (int index = 0; index < activeCount; index++)
+        {
+            Assert.True(existing.TryReserveSeats());
+            Booking booking = new Booking(existing.Id, userId);
+            if (index % 2 == 0)
+            {
+                booking.Confirm();
+            }
+
+            bookings.Add(booking);
+        }
+
+        Booking cancelled = new Booking(existing.Id, userId);
+        cancelled.Cancel();
+        Booking rejected = new Booking(existing.Id, userId);
+        rejected.Reject();
+        bookings.AddRange([cancelled, rejected]);
+        await database.SeedAsync(existing);
+        database.Context.Bookings.AddRange(bookings);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await database.Context.SaveChangesAsync(token);
+        database.Context.ChangeTracker.Clear();
+        int seatsBefore = existing.AvailableSeats;
+        ServiceResult<BookingInfo>? result = null;
+
+        // Act
+        Exception? error = await Record.ExceptionAsync(async () =>
+        {
+            result = await database.BookingService.CreateBookingAsync(existing.Id, userId, token);
+        });
+
+        // Assert
+        int added = 0;
+        if (activeCount < BookingService.MAX_ACTIVE_BOOKINGS)
+        {
+            Assert.Null(error);
+            Assert.NotNull(result);
+            Assert.True(result.Success);
+            Assert.Equal(userId, Assert.IsType<BookingInfo>(result.Data).UserId);
+            added = 1;
+        }
+        else
+        {
+            ActiveBookingLimitExceededException limitError = Assert.IsType<ActiveBookingLimitExceededException>(error);
+            Assert.Contains(BookingService.MAX_ACTIVE_BOOKINGS.ToString(), limitError.Message);
+            Assert.Null(result);
+        }
+
+        database.Context.ChangeTracker.Clear();
+        Assert.Equal(bookings.Count + added, await database.Context.Bookings.CountAsync(token));
+        Assert.Equal(seatsBefore - added, (await database.Context.Events.SingleAsync(token)).AvailableSeats);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Cancel_ForeignBookingRequiresAdminAndPersistsOnlyAllowedChanges(bool isAdmin)
+    {
+        // Arrange
+        using ServiceTestContext database = new ServiceTestContext();
+        Event existing = CreateEvent();
+        await database.SeedAsync(existing);
+        Guid ownerId = Guid.NewGuid();
+        Guid actorId = Guid.NewGuid();
+        CancellationToken token = TestContext.Current.CancellationToken;
+        ServiceResult<BookingInfo> created = await database.BookingService.CreateBookingAsync(existing.Id, ownerId, token);
+        BookingInfo booking = Assert.IsType<BookingInfo>(created.Data);
+        ServiceResult? result = null;
+
+        // Act
+        Exception? error = await Record.ExceptionAsync(async () =>
+        {
+            result = await database.BookingService.CancelBookingAsync(booking.Id, actorId, isAdmin, token);
+        });
+
+        // Assert
+        BookingStatus expectedStatus = BookingStatus.Pending;
+        int expectedSeats = existing.TotalSeats - 1;
+        if (isAdmin)
+        {
+            Assert.Null(error);
+            Assert.NotNull(result);
+            Assert.True(result.Success);
+            expectedStatus = BookingStatus.Cancelled;
+            expectedSeats = existing.TotalSeats;
+        }
+        else
+        {
+            Assert.IsType<BookingAccessDeniedException>(error);
+            Assert.Null(result);
+        }
+
+        database.Context.ChangeTracker.Clear();
+        Booking stored = await database.Context.Bookings.AsNoTracking().SingleAsync(token);
+        Assert.Equal(ownerId, stored.UserId);
+        Assert.Equal(expectedStatus, stored.Status);
+        Assert.Equal(expectedSeats, (await database.Context.Events.AsNoTracking().SingleAsync(token)).AvailableSeats);
+    }
+
     [Fact]
     public async Task Create_PastEventDoesNotReserveSeatOrAddBooking()
     {

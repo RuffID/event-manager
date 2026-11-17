@@ -198,6 +198,7 @@ namespace EventManager.Api.Tests.Security
             }).Build();
             ServiceCollection services = new ServiceCollection();
             services.AddLogging();
+            services.AddRouting();
             services.AddSecurityComponents(configuration);
             services.AddJwtAuthentication();
 
