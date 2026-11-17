@@ -17,14 +17,15 @@ namespace EventManager.Api.Tests.Services
         public async Task CreateEvent_ReturnsCreatedEvent_WhenDataIsValid()
         {
             // Arrange
+            DateTime startAt = DateTime.UtcNow.AddDays(1);
             AppDbContext context = await CreateContextAsync();
             IEventService service = _database.EventService;
             CreateEventDto dto = new CreateEventDto
             {
                 Title = "Новая встреча",
                 Description = "Описание встречи",
-                StartAt = new DateTime(2026, 11, 10, 18, 0, 0),
-                EndAt = new DateTime(2026, 11, 10, 20, 0, 0),
+                StartAt = startAt,
+                EndAt = startAt.AddHours(2),
                 TotalSeats = 25
             };
 
@@ -96,10 +97,11 @@ namespace EventManager.Api.Tests.Services
         public async Task UpdateEvent_ReturnsUpdatedEvent_WhenEventExists()
         {
             // Arrange
+            DateTime startAt = DateTime.UtcNow.AddDays(1);
             Event existingEvent = CreateStoredEvent(
                 "Старое название",
-                new DateTime(2026, 11, 4, 10, 0, 0),
-                new DateTime(2026, 11, 4, 12, 0, 0));
+                startAt,
+                startAt.AddHours(2));
 
             AppDbContext context = await CreateContextAsync(existingEvent);
             IEventService service = _database.EventService;
@@ -107,8 +109,8 @@ namespace EventManager.Api.Tests.Services
             {
                 Title = "Новое название",
                 Description = "Новое описание",
-                StartAt = new DateTime(2026, 11, 4, 13, 0, 0),
-                EndAt = new DateTime(2026, 11, 4, 15, 0, 0)
+                StartAt = startAt.AddHours(3),
+                EndAt = startAt.AddHours(5)
             };
 
             // Act
@@ -128,10 +130,11 @@ namespace EventManager.Api.Tests.Services
         public async Task DeleteEvent_RemovesEvent_WhenEventExists()
         {
             // Arrange
+            DateTime startAt = DateTime.UtcNow.AddDays(1);
             Event existingEvent = CreateStoredEvent(
                 "Встреча для удаления",
-                new DateTime(2026, 11, 5, 10, 0, 0),
-                new DateTime(2026, 11, 5, 12, 0, 0));
+                startAt,
+                startAt.AddHours(2));
 
             AppDbContext context = await CreateContextAsync(existingEvent);
             IEventService service = _database.EventService;
@@ -149,15 +152,16 @@ namespace EventManager.Api.Tests.Services
         public async Task GetEvents_ReturnsMatchingEvents_WhenTitleFilterIsSpecified()
         {
             // Arrange
+            DateTime startAt = DateTime.UtcNow.AddDays(1);
             Event matchingEvent = CreateStoredEvent(
                 "C# Meetup",
-                new DateTime(2026, 11, 6, 10, 0, 0),
-                new DateTime(2026, 11, 6, 12, 0, 0));
+                startAt,
+                startAt.AddHours(2));
 
             Event otherEvent = CreateStoredEvent(
                 "Java Meetup",
-                new DateTime(2026, 11, 7, 10, 0, 0),
-                new DateTime(2026, 11, 7, 12, 0, 0));
+                startAt.AddDays(1),
+                startAt.AddDays(1).AddHours(2));
 
             await CreateContextAsync(matchingEvent, otherEvent);
             IEventService service = _database.EventService;
