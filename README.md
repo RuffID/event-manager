@@ -7,8 +7,8 @@
 ## Структура проекта
 
 - `EventManager.Domain` — события, брони и их основные правила.
-- `EventManager.Application` — действия с событиями и бронями, данные для запросов и ответов, интерфейсы работы с хранилищем.
-- `EventManager.Infrastructure` — работа с PostgreSQL. Контекст, настройки таблиц и миграции находятся в `DataAccess`.
+- `EventManager.Application` — действия с событиями и бронями, данные для запросов и ответов, интерфейсы хранилища и безопасности.
+- `EventManager.Infrastructure` — работа с PostgreSQL, хеширование паролей и выпуск JWT.
 - `EventManager.Api` — HTTP-запросы, ответы, обработка ошибок и запуск приложения.
 - `EventManager.Application.Tests` — правила Domain и сценарии Application с подменами портов, без БД.
 - `EventManager.Api.Tests` — контроллеры, middleware, фоновая обработка и компонентные проверки с EF InMemory, без настоящей БД.
@@ -42,6 +42,12 @@ dotnet run --project .\EventManager.Api\EventManager.Api.csproj
 При запуске приложение автоматически применяет миграции к выбранной БД. При ошибке запуск останавливается.
 
 Swagger: [http://localhost:5239/swagger/index.html](http://localhost:5239/swagger/index.html).
+
+### Настройка JWT
+
+Настройки находятся в разделе `Jwt` файла `EventManager.Api/appsettings.json`: `Issuer` — издатель, `Audience` — получатель, `LifetimeMinutes` — срок действия токена в минутах.
+
+Секрет подписи задаётся в `SigningKeyBase64`: ключ не менее 32 байт в формате Base64.
 
 ### Миграции
 
