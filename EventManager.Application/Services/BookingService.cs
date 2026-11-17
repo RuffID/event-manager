@@ -79,7 +79,7 @@ namespace EventManager.Application.Services
             Booking? booking = await bookingRepository.GetByIdAsync(bookingId, cancellationToken);
             if (booking is not null)
             {
-                EnsureAccess(booking, userId, isAdmin);
+                EnsureAccess(booking, userId, isAdmin, "The user is not allowed to view this booking.");
 
                 return ServiceResult<BookingInfo>.Succeed(booking.ToInfo());
             }
@@ -112,7 +112,7 @@ namespace EventManager.Application.Services
                         return ServiceResult.Fail(ServiceErrorType.NotFound, "Booking not found.");
                     }
 
-                    EnsureAccess(booking, userId, isAdmin);
+                    EnsureAccess(booking, userId, isAdmin, "The user is not allowed to cancel this booking.");
                     if (booking.Status != BookingStatus.Pending && booking.Status != BookingStatus.Confirmed)
                     {
                         return ServiceResult.Fail(ServiceErrorType.Conflict, "Only an active booking can be cancelled.");
@@ -143,12 +143,12 @@ namespace EventManager.Application.Services
         }
 
         /// <summary>Проверяет право владельца или администратора на доступ к брони.</summary>
-        private void EnsureAccess(Booking booking, Guid userId, bool isAdmin)
+        private void EnsureAccess(Booking booking, Guid userId, bool isAdmin, string errorMessage)
         {
             if (!isAdmin && booking.UserId != userId)
             {
                 logger.LogWarning("Access to booking {BookingId} denied for user {UserId}.", booking.Id, userId);
-                throw new BookingAccessDeniedException();
+                throw new BookingAccessDeniedException(errorMessage);
             }
         }
     }
