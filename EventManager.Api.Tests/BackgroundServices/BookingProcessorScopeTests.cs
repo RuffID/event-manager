@@ -22,7 +22,7 @@ public class BookingProcessorScopeTests
         Event existing = CreateEvent(BOOKING_COUNT);
         Assert.True(existing.TryReserveSeats(BOOKING_COUNT));
         await database.SeedAsync(existing);
-        Booking[] bookings = Enumerable.Range(0, BOOKING_COUNT).Select(_ => new Booking(existing.Id)).ToArray();
+        Booking[] bookings = Enumerable.Range(0, BOOKING_COUNT).Select(_ => new Booking(existing.Id, Guid.NewGuid())).ToArray();
         database.Context.Bookings.AddRange(bookings);
         await database.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         database.Context.ChangeTracker.Clear();
@@ -56,7 +56,7 @@ public class BookingProcessorScopeTests
         using ServiceTestContext database = new ServiceTestContext(new ImmediateDelay(), interceptor);
         Event existing = CreateEvent(1);
         await database.SeedAsync(existing);
-        await database.BookingService.CreateBookingAsync(existing.Id, TestContext.Current.CancellationToken);
+        await database.BookingService.CreateBookingAsync(existing.Id, Guid.NewGuid(), TestContext.Current.CancellationToken);
         database.Context.ChangeTracker.Clear();
 
         // Act

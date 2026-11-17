@@ -20,6 +20,7 @@ namespace EventManager.Application.Mappers
             {
                 Id = booking.Id,
                 EventId = booking.EventId,
+                UserId = booking.UserId,
                 Status = status,
                 CreatedAt = booking.CreatedAt,
                 ProcessedAt = processedAt

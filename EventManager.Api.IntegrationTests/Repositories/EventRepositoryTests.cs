@@ -267,9 +267,9 @@ public class EventRepositoryTests(PostgresFixture database)
         await database.ResetAsync();
         Event deleted = TestData.CreateEvent("Deleted");
         Event other = TestData.CreateEvent("Other");
-        Booking first = new Booking(deleted.Id);
-        Booking second = new Booking(deleted.Id);
-        Booking unrelated = new Booking(other.Id);
+        Booking first = new Booking(deleted.Id, Guid.NewGuid());
+        Booking second = new Booking(deleted.Id, Guid.NewGuid());
+        Booking unrelated = new Booking(other.Id, Guid.NewGuid());
         await TestData.SeedAsync(database, [deleted, other], first, second, unrelated);
         await using AppDbContext write = database.CreateContext();
         Event target = await write.Events.SingleAsync(item => item.Id == deleted.Id, CancellationToken.None);

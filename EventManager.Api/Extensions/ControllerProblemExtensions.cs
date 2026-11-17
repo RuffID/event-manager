@@ -69,6 +69,8 @@ namespace EventManager.Api.Extensions
                 ServiceErrorType.Validation => StatusCodes.Status400BadRequest,
                 ServiceErrorType.NotFound => StatusCodes.Status404NotFound,
                 ServiceErrorType.Internal => StatusCodes.Status500InternalServerError,
+                ServiceErrorType.Unauthorized => StatusCodes.Status401Unauthorized,
+                ServiceErrorType.Conflict => StatusCodes.Status409Conflict,
                 _ => throw new ArgumentOutOfRangeException(
                     nameof(error.Type),
                     error.Type,

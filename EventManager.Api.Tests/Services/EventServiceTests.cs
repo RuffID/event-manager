@@ -525,7 +525,7 @@ namespace EventManager.Api.Tests.Services
             Assert.True(existingEvent.TryReserveSeats());
             AppDbContext context = await CreateContextAsync(existingEvent);
             Event trackedEvent = await context.Events.SingleAsync(TestContext.Current.CancellationToken);
-            Booking booking = new Booking(existingEvent.Id);
+            Booking booking = new Booking(existingEvent.Id, Guid.NewGuid());
             context.Bookings.Add(booking);
             await context.SaveChangesAsync(TestContext.Current.CancellationToken);
             IEventService service = _database.EventService;

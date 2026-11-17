@@ -37,6 +37,7 @@ namespace EventManager.Infrastructure.Extensions
         {
             services.AddScoped<IEventRepository, EventRepository>();
             services.AddScoped<IBookingRepository, BookingRepository>();
+            services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 
             return services;

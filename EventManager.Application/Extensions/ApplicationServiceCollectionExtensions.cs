@@ -13,6 +13,7 @@ namespace EventManager.Application.Extensions
         {
             services.AddScoped<IEventService, EventService>();
             services.AddScoped<IBookingService, BookingService>();
+            services.AddScoped<IUserService, UserService>();
             services.AddScoped<BookingProcessing>();
 
             return services;

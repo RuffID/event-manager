@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using EventManager.Domain.Exceptions;
 
 namespace EventManager.Domain.Entities
 {
@@ -157,6 +158,24 @@ namespace EventManager.Domain.Entities
 
                 _availableSeats -= count;
                 return true;
+            }
+        }
+
+        /// <summary>Резервирует одно место, если событие ещё не началось.</summary>
+        /// <param name="utcNow">Текущее время сервера в UTC.</param>
+        public void ReserveSeat(DateTime utcNow)
+        {
+            lock (_seatLock)
+            {
+                if (StartAt <= utcNow)
+                {
+                    throw new EventAlreadyStartedException();
+                }
+
+                if (!TryReserveSeats())
+                {
+                    throw new NoAvailableSeatsException();
+                }
             }
         }
 

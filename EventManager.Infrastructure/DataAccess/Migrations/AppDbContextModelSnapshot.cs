@@ -17,12 +17,12 @@ namespace EventManager.Infrastructure.DataAccess.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.15")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("EventManager.Api.Models.Booking", b =>
+            modelBuilder.Entity("EventManager.Domain.Entities.Booking", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
@@ -46,14 +46,20 @@ namespace EventManager.Infrastructure.DataAccess.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("status");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
                     b.HasKey("Id");
 
                     b.HasIndex("EventId");
 
+                    b.HasIndex("UserId");
+
                     b.ToTable("bookings", (string)null);
                 });
 
-            modelBuilder.Entity("EventManager.Api.Models.Event", b =>
+            modelBuilder.Entity("EventManager.Domain.Entities.Event", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
@@ -91,18 +97,55 @@ namespace EventManager.Infrastructure.DataAccess.Migrations
                     b.ToTable("events", (string)null);
                 });
 
-            modelBuilder.Entity("EventManager.Api.Models.Booking", b =>
+            modelBuilder.Entity("EventManager.Domain.Entities.User", b =>
                 {
-                    b.HasOne("EventManager.Api.Models.Event", "Event")
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Login")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("login");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("password_hash");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("role");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Login")
+                        .IsUnique()
+                        .HasDatabaseName("ix_users_login");
+
+                    b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("EventManager.Domain.Entities.Booking", b =>
+                {
+                    b.HasOne("EventManager.Domain.Entities.Event", "Event")
                         .WithMany("Bookings")
                         .HasForeignKey("EventId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("EventManager.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Event");
                 });
 
-            modelBuilder.Entity("EventManager.Api.Models.Event", b =>
+            modelBuilder.Entity("EventManager.Domain.Entities.Event", b =>
                 {
                     b.Navigation("Bookings");
                 });

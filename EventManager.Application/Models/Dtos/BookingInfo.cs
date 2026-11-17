@@ -13,6 +13,9 @@ namespace EventManager.Application.Models.Dtos
         /// <summary>Получает или задаёт идентификатор забронированного события.</summary>
         public Guid EventId { get; set; }
 
+        /// <summary>Получает или задаёт идентификатор владельца брони.</summary>
+        public Guid UserId { get; set; }
+
         /// <summary>Получает или задаёт статус брони.</summary>
         public BookingStatus Status { get; set; }
 

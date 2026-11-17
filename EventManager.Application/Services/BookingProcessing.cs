@@ -31,53 +31,73 @@ namespace EventManager.Application.Services
         /// <param name="cancellationToken">Токен отмены операции.</param>
         public async Task ProcessBookingAsync(Guid bookingId, CancellationToken cancellationToken)
         {
-            Booking? booking = await bookingRepository.GetByIdForUpdateAsync(bookingId, cancellationToken);
-            if (booking is null || booking.Status != BookingStatus.Pending)
-            {
-                return;
-            }
+            SemaphoreSlim bookingSemaphore = BookingSynchronization.GetBookingSemaphore(bookingId);
+            await bookingSemaphore.WaitAsync(cancellationToken);
 
-            bool eventExists = await eventRepository.ExistsAsync(booking.EventId, cancellationToken);
-            if (!eventExists)
+            try
             {
-                booking.Reject();
-            }
-            else
-            {
-                booking.Confirm();
-            }
+                Booking? booking = await bookingRepository.GetByIdForUpdateAsync(bookingId, cancellationToken);
+                if (booking is null || booking.Status != BookingStatus.Pending)
+                {
+                    return;
+                }
 
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-            logger.LogInformation("Бронь {BookingId} обработана со статусом {Status}.", bookingId, booking.Status);
+                bool eventExists = await eventRepository.ExistsAsync(booking.EventId, cancellationToken);
+                if (!eventExists)
+                {
+                    booking.Reject();
+                }
+                else
+                {
+                    booking.Confirm();
+                }
+
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+                logger.LogInformation("Booking {BookingId} processed with status {Status}.", bookingId, booking.Status);
+            }
+            finally
+            {
+                bookingSemaphore.Release();
+            }
         }
 
         /// <summary>В отдельной единице работы отклоняет ожидающую бронь и возвращает место после ошибки.</summary>
         /// <param name="bookingId">Идентификатор брони.</param>
         public async Task RejectBookingAfterFailureAsync(Guid bookingId)
         {
-            // Компенсация после ошибки должна завершиться даже при остановке приложения.
-            // Использует тот же семафор, что и создание брони, до чтения и сохранения данных.
-            await BookingSynchronization.SeatSemaphore.WaitAsync(CancellationToken.None);
+            SemaphoreSlim bookingSemaphore = BookingSynchronization.GetBookingSemaphore(bookingId);
+            await bookingSemaphore.WaitAsync(CancellationToken.None);
 
             try
             {
-                Booking? booking = await bookingRepository.GetByIdForUpdateAsync(bookingId, CancellationToken.None);
-                if (booking is null || booking.Status != BookingStatus.Pending)
+                // Компенсация после ошибки должна завершиться даже при остановке приложения.
+                // Использует тот же семафор, что и создание брони, до чтения и сохранения данных.
+                await BookingSynchronization.SeatSemaphore.WaitAsync(CancellationToken.None);
+
+                try
                 {
-                    return;
+                    Booking? booking = await bookingRepository.GetByIdForUpdateAsync(bookingId, CancellationToken.None);
+                    if (booking is null || booking.Status != BookingStatus.Pending)
+                    {
+                        return;
+                    }
+
+                    booking.Reject();
+                    Event? @event = await eventRepository.GetCurrentByIdForUpdateAsync(booking.EventId, CancellationToken.None);
+
+                    @event?.ReleaseSeats();
+
+                    await unitOfWork.SaveChangesAsync(CancellationToken.None);
+                    logger.LogWarning("Booking {BookingId} rejected after processing failure.", booking.Id);
                 }
-
-                booking.Reject();
-                Event? @event = await eventRepository.GetByIdForUpdateAsync(booking.EventId, CancellationToken.None);
-
-                @event?.ReleaseSeats();
-
-                await unitOfWork.SaveChangesAsync(CancellationToken.None);
-                logger.LogWarning("Бронь {BookingId} отклонена после ошибки.", booking.Id);
+                finally
+                {
+                    BookingSynchronization.SeatSemaphore.Release();
+                }
             }
             finally
             {
-                BookingSynchronization.SeatSemaphore.Release();
+                bookingSemaphore.Release();
             }
         }
     }

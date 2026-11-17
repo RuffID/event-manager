@@ -46,8 +46,8 @@ namespace EventManager.Api.Tests.Services
                 "create-event" => database.EventService.CreateEventAsync(create, token),
                 "update-event" => database.EventService.UpdateEventAsync(existing.Id, update, token),
                 "delete-event" => database.EventService.DeleteEventAsync(existing.Id, token),
-                "create-booking" => database.BookingService.CreateBookingAsync(existing.Id, token),
-                "get-booking" => database.BookingService.GetBookingByIdAsync(Guid.NewGuid(), token),
+                "create-booking" => database.BookingService.CreateBookingAsync(existing.Id, Guid.NewGuid(), token),
+                "get-booking" => database.BookingService.GetBookingByIdAsync(Guid.NewGuid(), Guid.NewGuid(), true, token),
                 _ => throw new ArgumentOutOfRangeException(nameof(operation))
             };
 
@@ -72,13 +72,13 @@ namespace EventManager.Api.Tests.Services
             IBookingService secondService = secondScope.ServiceProvider.GetRequiredService<IBookingService>();
             using CancellationTokenSource cancellation = new CancellationTokenSource();
             using CancellationTokenSource timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            Task<ServiceResult<BookingInfo>> firstRequest = database.BookingService.CreateBookingAsync(existing.Id, timeout.Token);
+            Task<ServiceResult<BookingInfo>> firstRequest = database.BookingService.CreateBookingAsync(existing.Id, Guid.NewGuid(), timeout.Token);
 
             // Act
             try
             {
                 await interceptor.Started.WaitAsync(timeout.Token);
-                Task<ServiceResult<BookingInfo>> secondRequest = secondService.CreateBookingAsync(existing.Id, cancellation.Token);
+                Task<ServiceResult<BookingInfo>> secondRequest = secondService.CreateBookingAsync(existing.Id, Guid.NewGuid(), cancellation.Token);
                 cancellation.Cancel();
 
                 // Assert
@@ -97,7 +97,7 @@ namespace EventManager.Api.Tests.Services
             IBookingService thirdService = thirdScope.ServiceProvider.GetRequiredService<IBookingService>();
 
             // Act
-            ServiceResult<BookingInfo> thirdResult = await thirdService.CreateBookingAsync(existing.Id, timeout.Token);
+            ServiceResult<BookingInfo> thirdResult = await thirdService.CreateBookingAsync(existing.Id, Guid.NewGuid(), timeout.Token);
 
             // Assert
             Assert.True((await firstRequest).Success);

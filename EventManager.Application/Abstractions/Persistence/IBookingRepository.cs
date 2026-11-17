@@ -14,6 +14,9 @@ namespace EventManager.Application.Abstractions.Persistence
         /// <summary>Получает материализованные идентификаторы ожидающих бронирований без отслеживания.</summary>
         Task<IReadOnlyList<Guid>> GetPendingIdsAsync(CancellationToken cancellationToken);
 
+        /// <summary>Считает ожидающие и подтверждённые брони указанного пользователя.</summary>
+        Task<int> CountActiveByUserAsync(Guid userId, CancellationToken cancellationToken);
+
         /// <summary>Добавляет бронирование в общий контекст без сохранения.</summary>
         void Add(Booking booking);
     }

@@ -1,4 +1,8 @@
 using EventManager.Application.Abstractions.Persistence;
+using EventManager.Domain.Exceptions;
+using EventManager.Infrastructure.DataAccess.Configurations;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace EventManager.Infrastructure.DataAccess
 {
@@ -7,9 +11,21 @@ namespace EventManager.Infrastructure.DataAccess
     public class EfUnitOfWork(AppDbContext context) : IUnitOfWork
     {
         /// <inheritdoc />
-        public Task<int> SaveChangesAsync(CancellationToken cancellationToken)
+        public async Task<int> SaveChangesAsync(CancellationToken cancellationToken)
         {
-            return context.SaveChangesAsync(cancellationToken);
+            try
+            {
+                return await context.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException exception) when (
+                exception.InnerException is PostgresException
+                {
+                    SqlState: PostgresErrorCodes.UniqueViolation,
+                    ConstraintName: UserConfiguration.LOGIN_INDEX_NAME
+                })
+            {
+                throw new UserLoginAlreadyExistsException();
+            }
         }
     }
 }

@@ -14,7 +14,7 @@ namespace EventManager.Application.Tests.Models
             DateTime beforeCreation = DateTime.UtcNow;
 
             // Act
-            Booking booking = new Booking(eventId);
+            Booking booking = new Booking(eventId, Guid.NewGuid());
 
             // Assert
             DateTime afterCreation = DateTime.UtcNow;
@@ -32,7 +32,7 @@ namespace EventManager.Application.Tests.Models
             // Arrange
 
             // Act
-            Action action = () => new Booking(Guid.Empty);
+            Action action = () => new Booking(Guid.Empty, Guid.NewGuid());
 
             // Assert
             ArgumentException exception = Assert.Throws<ArgumentException>(action);
@@ -43,7 +43,7 @@ namespace EventManager.Application.Tests.Models
         public void Confirm_SetsConfirmedStatusAndProcessedAt_WhenBookingIsPending()
         {
             // Arrange
-            Booking booking = new Booking(Guid.NewGuid());
+            Booking booking = new Booking(Guid.NewGuid(), Guid.NewGuid());
             DateTime beforeProcessing = DateTime.UtcNow;
 
             // Act
@@ -62,7 +62,7 @@ namespace EventManager.Application.Tests.Models
         public void Reject_SetsRejectedStatusAndProcessedAt_WhenBookingIsPending()
         {
             // Arrange
-            Booking booking = new Booking(Guid.NewGuid());
+            Booking booking = new Booking(Guid.NewGuid(), Guid.NewGuid());
             DateTime beforeProcessing = DateTime.UtcNow;
 
             // Act
@@ -81,7 +81,7 @@ namespace EventManager.Application.Tests.Models
         public void Reject_ThrowsInvalidOperationException_WhenBookingIsConfirmed()
         {
             // Arrange
-            Booking booking = new Booking(Guid.NewGuid());
+            Booking booking = new Booking(Guid.NewGuid(), Guid.NewGuid());
             booking.Confirm();
             DateTime? processedAt = booking.ProcessedAt;
 
@@ -98,7 +98,7 @@ namespace EventManager.Application.Tests.Models
         public void Confirm_ThrowsInvalidOperationException_WhenBookingIsRejected()
         {
             // Arrange
-            Booking booking = new Booking(Guid.NewGuid());
+            Booking booking = new Booking(Guid.NewGuid(), Guid.NewGuid());
             booking.Reject();
             DateTime? processedAt = booking.ProcessedAt;
 
@@ -115,7 +115,7 @@ namespace EventManager.Application.Tests.Models
         public void Confirm_ThrowsInvalidOperationException_WhenBookingIsAlreadyConfirmed()
         {
             // Arrange
-            Booking booking = new Booking(Guid.NewGuid());
+            Booking booking = new Booking(Guid.NewGuid(), Guid.NewGuid());
             booking.Confirm();
             DateTime? processedAt = booking.ProcessedAt;
 
@@ -132,7 +132,7 @@ namespace EventManager.Application.Tests.Models
         public void Reject_ThrowsInvalidOperationException_WhenBookingIsAlreadyRejected()
         {
             // Arrange
-            Booking booking = new Booking(Guid.NewGuid());
+            Booking booking = new Booking(Guid.NewGuid(), Guid.NewGuid());
             booking.Reject();
             DateTime? processedAt = booking.ProcessedAt;
 
@@ -149,7 +149,7 @@ namespace EventManager.Application.Tests.Models
         public async Task ConfirmAndReject_AllowOnlyOneTransition_WhenCalledConcurrently()
         {
             // Arrange
-            Booking booking = new Booking(Guid.NewGuid());
+            Booking booking = new Booking(Guid.NewGuid(), Guid.NewGuid());
 
             // Act
             Task<Exception?> confirmTask = Task.Run(() => Record.Exception(booking.Confirm));

@@ -22,16 +22,25 @@ namespace EventManager.Api.Controllers
         /// <param name="cancellationToken">Токен отмены HTTP-запроса.</param>
         /// <response code="200">Возвращает найденную бронь.</response>
         /// <response code="400">Передан невалидный идентификатор брони.</response>
+        /// <response code="401">Текущий пользователь не определён.</response>
+        /// <response code="403">Бронь принадлежит другому пользователю.</response>
         /// <response code="404">Бронь с указанным идентификатором не найдена.</response>
         /// <response code="500">Не удалось обработать запрос.</response>
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(BookingInfo), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetBooking(Guid id, CancellationToken cancellationToken = default)
         {
-            ServiceResult<BookingInfo> result = await bookingService.GetBookingByIdAsync(id, cancellationToken);
+            if (!User.TryGetUserId(out Guid userId))
+            {
+                return Unauthorized();
+            }
+
+            ServiceResult<BookingInfo> result = await bookingService.GetBookingByIdAsync(id, userId, User.IsInRole("Admin"), cancellationToken);
             return this.ToActionResult(result, booking => Ok(booking));
         }
     }

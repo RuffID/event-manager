@@ -22,7 +22,7 @@ namespace EventManager.Api.Tests.BackgroundServices
                 new DateTime(2030, 1, 1, 10, 0, 0, DateTimeKind.Utc),
                 new DateTime(2030, 1, 1, 12, 0, 0, DateTimeKind.Utc), 1);
             await database.SeedAsync(@event);
-            await database.BookingService.CreateBookingAsync(@event.Id, cancellationToken: TestContext.Current.CancellationToken);
+            await database.BookingService.CreateBookingAsync(@event.Id, Guid.NewGuid(), cancellationToken: TestContext.Current.CancellationToken);
             using BookingProcessingService service = new BookingProcessingService(
                 database.ServiceProvider.GetRequiredService<IServiceScopeFactory>(),
                 NullLogger<BookingProcessingService>.Instance);
@@ -52,7 +52,7 @@ namespace EventManager.Api.Tests.BackgroundServices
             using ServiceTestContext database = new ServiceTestContext(processingDelay);
             Event @event = Event.Create("Событие", null, DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), 1);
             await database.SeedAsync(@event);
-            await database.BookingService.CreateBookingAsync(@event.Id, cancellationToken: TestContext.Current.CancellationToken);
+            await database.BookingService.CreateBookingAsync(@event.Id, Guid.NewGuid(), cancellationToken: TestContext.Current.CancellationToken);
             FailingOnceScopeFactory scopeFactory = new FailingOnceScopeFactory(
                 database.ServiceProvider.GetRequiredService<IServiceScopeFactory>());
             using BookingProcessingService service = new BookingProcessingService(

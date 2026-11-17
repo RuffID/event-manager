@@ -66,7 +66,7 @@ public class BookingProcessingPortTests
     {
         // Arrange
         Event existing = CreateEvent();
-        Booking booking = new Booking(existing.Id);
+        Booking booking = new Booking(existing.Id, Guid.NewGuid());
         RecordingBookingRepository bookings = new RecordingBookingRepository { Booking = booking };
         RecordingEventRepository events = new RecordingEventRepository();
         if (eventExists)
@@ -101,7 +101,7 @@ public class BookingProcessingPortTests
         // Arrange
         Event existing = CreateEvent();
         Assert.True(existing.TryReserveSeats(2));
-        Booking booking = new Booking(existing.Id);
+        Booking booking = new Booking(existing.Id, Guid.NewGuid());
         RecordingBookingRepository bookings = new RecordingBookingRepository();
         if (status == BookingStatus.Confirmed)
         {
@@ -151,7 +151,7 @@ public class BookingProcessingPortTests
         // Arrange
         Event existing = CreateEvent();
         Assert.True(existing.TryReserveSeats(2));
-        Booking booking = new Booking(existing.Id);
+        Booking booking = new Booking(existing.Id, Guid.NewGuid());
         RecordingBookingRepository bookings = new RecordingBookingRepository { Booking = booking };
         RecordingEventRepository events = new RecordingEventRepository();
         if (eventExists)
@@ -169,7 +169,7 @@ public class BookingProcessingPortTests
         Assert.Equal(BookingStatus.Rejected, booking.Status);
         Assert.NotNull(booking.ProcessedAt);
         Assert.Equal(("update", booking.Id, CancellationToken.None), Assert.Single(bookings.Calls));
-        Assert.Equal(("update", existing.Id, CancellationToken.None), Assert.Single(events.Calls));
+        Assert.Equal(("current", existing.Id, CancellationToken.None), Assert.Single(events.Calls));
         Assert.Equal(CancellationToken.None, Assert.Single(work.SavedTokens));
 
         // Arrange
@@ -204,7 +204,7 @@ public class BookingProcessingPortTests
         // Arrange
         Event existing = CreateEvent();
         Assert.True(existing.TryReserveSeats());
-        Booking booking = new Booking(existing.Id);
+        Booking booking = new Booking(existing.Id, Guid.NewGuid());
         RecordingBookingRepository bookings = new RecordingBookingRepository { Booking = booking };
         RecordingEventRepository events = new RecordingEventRepository { Event = existing };
         InvalidOperationException failure = new InvalidOperationException("Save failed.");

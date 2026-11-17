@@ -55,34 +55,26 @@ namespace EventManager.Domain.Entities
         {
         }
 
-        /// <summary>
-        /// Создаёт бронь в статусе ожидания обработки.
-        /// </summary>
-        /// <remarks>Существующие сценарии используют этот конструктор до подключения пользователя в сервисах и API.</remarks>
-        /// <param name="eventId">Идентификатор события.</param>
-        public Booking(Guid eventId)
-        {
-            if (eventId == Guid.Empty)
-                throw new ArgumentException("Event identifier must not be empty.", nameof(eventId));
-
-            Id = Guid.NewGuid();
-            EventId = eventId;
-            _status = BookingStatus.Pending;
-            CreatedAt = DateTime.UtcNow;
-        }
-
         /// <summary>Создаёт бронь указанного пользователя в статусе ожидания обработки.</summary>
         /// <param name="eventId">Идентификатор события.</param>
         /// <param name="userId">Идентификатор пользователя.</param>
         public Booking(Guid eventId, Guid userId)
-            : this(eventId)
         {
+            if (eventId == Guid.Empty)
+            {
+                throw new ArgumentException("Event identifier must not be empty.", nameof(eventId));
+            }
+
             if (userId == Guid.Empty)
             {
                 throw new ArgumentException("User identifier must not be empty.", nameof(userId));
             }
 
+            Id = Guid.NewGuid();
+            EventId = eventId;
             UserId = userId;
+            _status = BookingStatus.Pending;
+            CreatedAt = DateTime.UtcNow;
         }
 
         /// <summary>Отменяет бронь, сохраняя время её предыдущей обработки.</summary>

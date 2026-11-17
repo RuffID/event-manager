@@ -20,7 +20,7 @@ namespace EventManager.Api.Tests.BackgroundServices
             // Arrange
             Event @event = CreateEvent();
             Assert.True(@event.TryReserveSeats());
-            Booking booking = new Booking(@event.Id);
+            Booking booking = new Booking(@event.Id, Guid.NewGuid());
             using ServiceTestContext database = new ServiceTestContext(new ImmediateBookingProcessingDelay());
             await SeedAsync(database, @event, booking);
             BookingProcessor processor = database.BookingProcessor;
@@ -42,7 +42,7 @@ namespace EventManager.Api.Tests.BackgroundServices
             // Arrange
             Event @event = CreateEvent();
             Assert.True(@event.TryReserveSeats());
-            Booking booking = new Booking(@event.Id);
+            Booking booking = new Booking(@event.Id, Guid.NewGuid());
             using ServiceTestContext database = new ServiceTestContext(new FailingBookingProcessingDelay());
             await SeedAsync(database, @event, booking);
             BookingProcessor processor = database.BookingProcessor;
@@ -61,7 +61,7 @@ namespace EventManager.Api.Tests.BackgroundServices
 
             // Act
             ServiceResult<BookingInfo> result =
-                await bookingService.CreateBookingAsync(@event.Id, cancellationToken: TestContext.Current.CancellationToken);
+                await bookingService.CreateBookingAsync(@event.Id, Guid.NewGuid(), cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.True(result.Success);
@@ -76,7 +76,7 @@ namespace EventManager.Api.Tests.BackgroundServices
             // Arrange
             Event @event = CreateEvent();
             Assert.True(@event.TryReserveSeats());
-            Booking booking = new Booking(@event.Id);
+            Booking booking = new Booking(@event.Id, Guid.NewGuid());
             using ServiceTestContext database = new ServiceTestContext(new ImmediateBookingProcessingDelay());
             await SeedAsync(database, @event, booking);
             BookingProcessor processor = database.BookingProcessor;
@@ -100,7 +100,7 @@ namespace EventManager.Api.Tests.BackgroundServices
             // Arrange
             Event @event = CreateEvent();
             Assert.True(@event.TryReserveSeats());
-            Booking booking = new Booking(@event.Id);
+            Booking booking = new Booking(@event.Id, Guid.NewGuid());
             using ServiceTestContext database = new ServiceTestContext(new ImmediateBookingProcessingDelay());
             // InMemory допускает отсутствие события; PostgreSQL защищает связь внешним ключом.
             database.Context.Bookings.Add(booking);
@@ -128,7 +128,7 @@ namespace EventManager.Api.Tests.BackgroundServices
             for (int index = 0; index < bookingCount; index++)
             {
                 Assert.True(@event.TryReserveSeats());
-                Booking booking = new Booking(@event.Id);
+                Booking booking = new Booking(@event.Id, Guid.NewGuid());
                 bookings.Add(booking);
             }
 
@@ -161,7 +161,7 @@ namespace EventManager.Api.Tests.BackgroundServices
             Event @event = CreateEvent(totalSeats: bookingCount);
             Assert.True(@event.TryReserveSeats(bookingCount));
             Booking[] bookings = Enumerable.Range(0, bookingCount)
-                .Select(_ => new Booking(@event.Id)).ToArray();
+                .Select(_ => new Booking(@event.Id, Guid.NewGuid())).ToArray();
             CoordinatedBookingProcessingDelay processingDelay = new CoordinatedBookingProcessingDelay(bookingCount, true);
             using ServiceTestContext database = new ServiceTestContext(processingDelay);
             await SeedAsync(database, @event, bookings);
@@ -192,7 +192,7 @@ namespace EventManager.Api.Tests.BackgroundServices
             Event @event = CreateEvent(totalSeats: bookingCount);
             Assert.True(@event.TryReserveSeats(bookingCount));
             Booking[] bookings = Enumerable.Range(0, bookingCount)
-                .Select(_ => new Booking(@event.Id)).ToArray();
+                .Select(_ => new Booking(@event.Id, Guid.NewGuid())).ToArray();
             CoordinatedBookingProcessingDelay processingDelay = new CoordinatedBookingProcessingDelay(bookingCount);
             using ServiceTestContext database = new ServiceTestContext(processingDelay);
             await SeedAsync(database, @event, bookings);
@@ -219,7 +219,7 @@ namespace EventManager.Api.Tests.BackgroundServices
             // Arrange
             Event @event = CreateEvent();
             Assert.True(@event.TryReserveSeats());
-            Booking booking = new Booking(@event.Id);
+            Booking booking = new Booking(@event.Id, Guid.NewGuid());
             FailingBookingSaveInterceptor interceptor = new FailingBookingSaveInterceptor(failCompensation);
             using ServiceTestContext database = new ServiceTestContext(new ImmediateBookingProcessingDelay(), interceptor);
             await SeedAsync(database, @event, booking);

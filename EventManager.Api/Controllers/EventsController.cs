@@ -97,19 +97,26 @@ namespace EventManager.Api.Controllers
         /// <param name="id">Идентификатор события.</param>
         /// <param name="cancellationToken">Токен отмены HTTP-запроса.</param>
         /// <response code="202">Бронь создана и ожидает обработки.</response>
-        /// <response code="400">Передан невалидный идентификатор события.</response>
+        /// <response code="400">Передан невалидный идентификатор или событие уже началось.</response>
+        /// <response code="401">Текущий пользователь не определён.</response>
         /// <response code="404">Событие с указанным идентификатором не найдено.</response>
-        /// <response code="409">На событии нет свободных мест.</response>
+        /// <response code="409">Нет свободных мест или достигнут лимит активных броней.</response>
         /// <response code="500">Не удалось сохранить бронь.</response>
         [HttpPost("{id}/book")]
         [ProducesResponseType(typeof(BookingInfo), StatusCodes.Status202Accepted)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CreateBooking(Guid id, CancellationToken cancellationToken = default)
         {
-            ServiceResult<BookingInfo> result = await bookingService.CreateBookingAsync(id, cancellationToken);
+            if (!User.TryGetUserId(out Guid userId))
+            {
+                return Unauthorized();
+            }
+
+            ServiceResult<BookingInfo> result = await bookingService.CreateBookingAsync(id, userId, cancellationToken);
 
             return this.ToActionResult(
                 result,

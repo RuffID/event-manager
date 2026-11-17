@@ -8,6 +8,8 @@ internal class RecordingBookingRepository : IBookingRepository
     public Booking? Booking { get; set; }
     public Booking? Added { get; private set; }
     public IReadOnlyList<Guid>? PendingIds { get; set; }
+    public int ActiveCount { get; set; }
+    public List<(Guid UserId, CancellationToken Token)> CountCalls { get; } = [];
     public List<(string Operation, Guid Id, CancellationToken Token)> Calls { get; } = [];
 
     public Task<Booking?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
@@ -39,5 +41,12 @@ internal class RecordingBookingRepository : IBookingRepository
     public void Add(Booking booking)
     {
         Added = booking;
+    }
+
+    public Task<int> CountActiveByUserAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        CountCalls.Add((userId, cancellationToken));
+
+        return Task.FromResult(ActiveCount);
     }
 }

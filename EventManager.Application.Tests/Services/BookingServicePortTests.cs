@@ -5,6 +5,7 @@ using EventManager.Domain.Entities;
 using EventManager.Domain.Enums;
 using EventManager.Domain.Exceptions;
 using Xunit;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace EventManager.Application.Tests.Services;
 
@@ -18,11 +19,13 @@ public class BookingServicePortTests
         RecordingEventRepository events = new RecordingEventRepository { Event = existing };
         RecordingBookingRepository bookings = new RecordingBookingRepository();
         RecordingUnitOfWork work = new RecordingUnitOfWork();
-        BookingService service = new BookingService(events, bookings, work);
+        RecordingLogger<BookingService> logger = new RecordingLogger<BookingService>();
+        BookingService service = new BookingService(events, bookings, work, logger);
+        Guid userId = Guid.NewGuid();
         using CancellationTokenSource cancellation = new CancellationTokenSource();
 
         // Act
-        ServiceResult<BookingInfo> result = await service.CreateBookingAsync(existing.Id, cancellation.Token);
+        ServiceResult<BookingInfo> result = await service.CreateBookingAsync(existing.Id, userId, cancellation.Token);
 
         // Assert
         Assert.True(result.Success);
@@ -31,11 +34,15 @@ public class BookingServicePortTests
         BookingInfo dto = Assert.IsType<BookingInfo>(result.Data);
         Assert.Equal(added.Id, dto.Id);
         Assert.Equal(existing.Id, dto.EventId);
+        Assert.Equal(userId, dto.UserId);
+        Assert.Equal(userId, added.UserId);
         Assert.Equal(BookingStatus.Pending, dto.Status);
         Assert.Equal(added.CreatedAt, dto.CreatedAt);
         Assert.Null(dto.ProcessedAt);
         Assert.Equal(1, existing.AvailableSeats);
         Assert.Equal(("current", existing.Id, cancellation.Token), Assert.Single(events.Calls));
+        Assert.Equal((userId, cancellation.Token), Assert.Single(bookings.CountCalls));
+        Assert.Contains(userId.ToString(), Assert.Single(logger.Entries).Message);
         Assert.Equal(cancellation.Token, Assert.Single(work.SavedTokens));
     }
 
@@ -47,11 +54,11 @@ public class BookingServicePortTests
         RecordingEventRepository events = new RecordingEventRepository();
         RecordingBookingRepository bookings = new RecordingBookingRepository();
         RecordingUnitOfWork work = new RecordingUnitOfWork();
-        BookingService service = new BookingService(events, bookings, work);
+        BookingService service = new BookingService(events, bookings, work, NullLogger<BookingService>.Instance);
         using CancellationTokenSource cancellation = new CancellationTokenSource();
 
         // Act
-        ServiceResult<BookingInfo> result = await service.CreateBookingAsync(id, cancellation.Token);
+        ServiceResult<BookingInfo> result = await service.CreateBookingAsync(id, Guid.NewGuid(), cancellation.Token);
 
         // Assert
         Assert.False(result.Success);
@@ -71,10 +78,10 @@ public class BookingServicePortTests
         RecordingEventRepository events = new RecordingEventRepository { Event = existing };
         RecordingBookingRepository bookings = new RecordingBookingRepository();
         RecordingUnitOfWork work = new RecordingUnitOfWork();
-        BookingService service = new BookingService(events, bookings, work);
+        BookingService service = new BookingService(events, bookings, work, NullLogger<BookingService>.Instance);
 
         // Act
-        Func<Task> action = () => service.CreateBookingAsync(existing.Id, TestContext.Current.CancellationToken);
+        Func<Task> action = () => service.CreateBookingAsync(existing.Id, Guid.NewGuid(), TestContext.Current.CancellationToken);
 
         // Assert
         await Assert.ThrowsAsync<NoAvailableSeatsException>(action);
@@ -92,11 +99,11 @@ public class BookingServicePortTests
         RecordingBookingRepository bookings = new RecordingBookingRepository();
         InvalidOperationException failure = new InvalidOperationException("Save failed.");
         RecordingUnitOfWork work = new RecordingUnitOfWork { SaveError = failure };
-        BookingService service = new BookingService(events, bookings, work);
+        BookingService service = new BookingService(events, bookings, work, NullLogger<BookingService>.Instance);
         using CancellationTokenSource timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
 
         // Act
-        Func<Task> action = () => service.CreateBookingAsync(existing.Id, timeout.Token);
+        Func<Task> action = () => service.CreateBookingAsync(existing.Id, Guid.NewGuid(), timeout.Token);
 
         // Assert
         Assert.Same(failure, await Assert.ThrowsAsync<InvalidOperationException>(action));
@@ -109,7 +116,7 @@ public class BookingServicePortTests
         work.SaveError = null;
 
         // Act
-        ServiceResult<BookingInfo> next = await service.CreateBookingAsync(events.Event.Id, timeout.Token);
+        ServiceResult<BookingInfo> next = await service.CreateBookingAsync(events.Event.Id, Guid.NewGuid(), timeout.Token);
 
         // Assert
         Assert.True(next.Success);
@@ -123,7 +130,7 @@ public class BookingServicePortTests
     public async Task GetBooking_ForwardsIdAndTokenWithoutSaving(bool exists)
     {
         // Arrange
-        Booking expected = new Booking(Guid.NewGuid());
+        Booking expected = new Booking(Guid.NewGuid(), Guid.NewGuid());
         RecordingBookingRepository bookings = new RecordingBookingRepository();
         if (exists)
         {
@@ -132,11 +139,11 @@ public class BookingServicePortTests
         }
 
         RecordingUnitOfWork work = new RecordingUnitOfWork();
-        BookingService service = new BookingService(new RecordingEventRepository(), bookings, work);
+        BookingService service = new BookingService(new RecordingEventRepository(), bookings, work, NullLogger<BookingService>.Instance);
         using CancellationTokenSource cancellation = new CancellationTokenSource();
 
         // Act
-        ServiceResult<BookingInfo> result = await service.GetBookingByIdAsync(expected.Id, cancellation.Token);
+        ServiceResult<BookingInfo> result = await service.GetBookingByIdAsync(expected.Id, Guid.NewGuid(), true, cancellation.Token);
 
         // Assert
         Assert.Equal(exists, result.Success);

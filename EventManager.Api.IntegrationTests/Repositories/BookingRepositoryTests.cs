@@ -17,13 +17,15 @@ public class BookingRepositoryTests(PostgresFixture database)
         // Arrange
         await database.ResetAsync();
         Event createdEvent = TestData.CreateEvent();
-        Booking createdBooking = new Booking(createdEvent.Id);
+        Booking createdBooking = new Booking(createdEvent.Id, Guid.NewGuid());
         await using AppDbContext write = database.CreateContext();
         EventRepository events = new EventRepository(write);
         BookingRepository bookings = new BookingRepository(write);
+        User user = TestData.CreateUser(createdBooking.UserId);
 
         // Act
         events.Add(createdEvent);
+        new UserRepository(write).Add(user);
         bookings.Add(createdBooking);
 
         // Assert
@@ -37,7 +39,7 @@ public class BookingRepositoryTests(PostgresFixture database)
         int savedEntries = await new EfUnitOfWork(write).SaveChangesAsync(CancellationToken.None);
 
         // Assert
-        Assert.Equal(2, savedEntries);
+        Assert.Equal(3, savedEntries);
         await using AppDbContext verify = database.CreateContext();
 
         TestData.AssertEvent(createdEvent, await verify.Events.AsNoTracking().SingleAsync(CancellationToken.None));
@@ -54,10 +56,10 @@ public class BookingRepositoryTests(PostgresFixture database)
         await database.ResetAsync();
         Event parent = TestData.CreateEvent();
         Event otherEvent = TestData.CreateEvent("Other");
-        Booking expected = new Booking(parent.Id);
+        Booking expected = new Booking(parent.Id, Guid.NewGuid());
         CompleteBooking(expected, status);
-        Booking sibling = new Booking(parent.Id);
-        Booking unrelated = new Booking(otherEvent.Id);
+        Booking sibling = new Booking(parent.Id, Guid.NewGuid());
+        Booking unrelated = new Booking(otherEvent.Id, Guid.NewGuid());
         await TestData.SeedAsync(database, [parent, otherEvent], unrelated, sibling, expected);
         await using AppDbContext read = database.CreateContext();
 
@@ -76,7 +78,7 @@ public class BookingRepositoryTests(PostgresFixture database)
         // Arrange
         await database.ResetAsync();
         Event parent = TestData.CreateEvent();
-        Booking expected = new Booking(parent.Id);
+        Booking expected = new Booking(parent.Id, Guid.NewGuid());
         await TestData.SeedAsync(database, [parent], expected);
         await using AppDbContext read = database.CreateContext();
 
@@ -99,7 +101,7 @@ public class BookingRepositoryTests(PostgresFixture database)
         // Arrange
         await database.ResetAsync();
         Event parent = TestData.CreateEvent();
-        await TestData.SeedAsync(database, [parent], new Booking(parent.Id));
+        await TestData.SeedAsync(database, [parent], new Booking(parent.Id, Guid.NewGuid()));
         await using AppDbContext read = database.CreateContext();
 
         // Act
@@ -117,8 +119,8 @@ public class BookingRepositoryTests(PostgresFixture database)
         // Arrange
         await database.ResetAsync();
         Event parent = TestData.CreateEvent();
-        Booking expected = new Booking(parent.Id);
-        Booking other = new Booking(parent.Id);
+        Booking expected = new Booking(parent.Id, Guid.NewGuid());
+        Booking other = new Booking(parent.Id, Guid.NewGuid());
         await TestData.SeedAsync(database, [parent], other, expected);
         await using AppDbContext write = database.CreateContext();
 
@@ -145,7 +147,7 @@ public class BookingRepositoryTests(PostgresFixture database)
         // Arrange
         await database.ResetAsync();
         Event parent = TestData.CreateEvent();
-        await TestData.SeedAsync(database, [parent], new Booking(parent.Id));
+        await TestData.SeedAsync(database, [parent], new Booking(parent.Id, Guid.NewGuid()));
         await using AppDbContext write = database.CreateContext();
 
         // Act
@@ -163,10 +165,10 @@ public class BookingRepositoryTests(PostgresFixture database)
         await database.ResetAsync();
         Event firstEvent = TestData.CreateEvent("First");
         Event secondEvent = TestData.CreateEvent("Second");
-        Booking first = new Booking(firstEvent.Id);
-        Booking second = new Booking(secondEvent.Id);
-        Booking confirmed = new Booking(firstEvent.Id);
-        Booking rejected = new Booking(secondEvent.Id);
+        Booking first = new Booking(firstEvent.Id, Guid.NewGuid());
+        Booking second = new Booking(secondEvent.Id, Guid.NewGuid());
+        Booking confirmed = new Booking(firstEvent.Id, Guid.NewGuid());
+        Booking rejected = new Booking(secondEvent.Id, Guid.NewGuid());
         confirmed.Confirm();
         rejected.Reject();
         await TestData.SeedAsync(database, [firstEvent, secondEvent], confirmed, first, rejected, second);
@@ -200,8 +202,8 @@ public class BookingRepositoryTests(PostgresFixture database)
         if (seedCompleted)
         {
             Event parent = TestData.CreateEvent();
-            Booking confirmed = new Booking(parent.Id);
-            Booking rejected = new Booking(parent.Id);
+            Booking confirmed = new Booking(parent.Id, Guid.NewGuid());
+            Booking rejected = new Booking(parent.Id, Guid.NewGuid());
             confirmed.Confirm();
             rejected.Reject();
             await TestData.SeedAsync(database, [parent], confirmed, rejected);
