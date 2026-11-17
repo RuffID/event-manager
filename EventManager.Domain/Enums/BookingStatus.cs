@@ -12,6 +12,9 @@ namespace EventManager.Domain.Enums
         Confirmed,
 
         /// <summary>Бронь отклонена.</summary>
-        Rejected
+        Rejected,
+
+        /// <summary>Бронь отменена.</summary>
+        Cancelled
     }
 }

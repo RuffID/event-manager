@@ -16,6 +16,10 @@ namespace EventManager.Infrastructure.DataAccess.Configurations
             builder.Property(entity => entity.Id).HasColumnName("id").ValueGeneratedNever();
 
             builder.Property(entity => entity.EventId).HasColumnName("event_id").IsRequired();
+
+            // Сохранение владельца подключается вместе с таблицей пользователей и миграцией.
+            builder.Ignore(entity => entity.UserId);
+
             builder.Property(entity => entity.Status)
                 .HasColumnName("status")
                 .HasField("_status")
