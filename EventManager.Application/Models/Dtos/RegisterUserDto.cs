@@ -12,6 +12,7 @@ namespace EventManager.Application.Models.Dtos
 
         /// <summary>Получает или задаёт пароль, который сохраняется только в виде хеша.</summary>
         [Required]
+        [MinLength(8)]
         public string Password { get; set; } = string.Empty;
 
         /// <summary>Получает или задаёт роль; выбор Admin разрешён ТЗ для учебного тестирования.</summary>

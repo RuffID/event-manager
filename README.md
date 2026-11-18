@@ -47,7 +47,13 @@ Swagger: [http://localhost:5239/swagger/index.html](http://localhost:5239/swagge
 
 Настройки находятся в разделе `Jwt` файла `EventManager.Api/appsettings.json`: `Issuer` — издатель, `Audience` — получатель, `LifetimeMinutes` — срок действия токена в минутах.
 
-Секрет подписи задаётся в `SigningKeyBase64`: ключ не менее 32 байт в формате Base64. Для продакшна используйте свой случайный ключ и храните его вне репозитория.
+Перед первым запуском задайте случайный ключ не менее 32 байт в формате Base64 через user-secrets:
+
+```powershell
+dotnet user-secrets set "Jwt:SigningKeyBase64" "<ключ в Base64>" --project .\EventManager.Api\EventManager.Api.csproj
+```
+
+В `Development` секрет загружается автоматически и хранится вне репозитория. Без корректного ключа запуск остановится. В других окружениях можно использовать переменную `Jwt__SigningKeyBase64`.
 
 ### Миграции
 
@@ -127,7 +133,7 @@ dotnet ef migrations add NextMigration --project .\EventManager.Infrastructure\E
 
 Без токена попробуйте создать событие через `POST /Events` — ожидается `401`.
 
-1. Зарегистрируйтесь через `POST /auth/register`: передайте `login`, `password` и `role: "Admin"`. Без роли создаётся `User`; выбор `Admin` разрешён учебным ТЗ.
+1. Зарегистрируйтесь через `POST /auth/register`: передайте `login`, `password` (минимум 8 символов) и `role: "Admin"`. Без роли создаётся `User`; выбор `Admin` разрешён учебным ТЗ.
 2. Вызовите `POST /auth/login` с теми же `login` и `password`. Скопируйте поле `token` в кнопку **Authorize** без префикса `Bearer`.
 3. Создайте событие через `POST /Events`, затем бронь через `POST /Events/{id}/book`. Сохраните их `id`.
 4. Получите бронь через `GET /Bookings/{id}`: после обработки статус станет `1`. Отмените её через `DELETE /Bookings/{id}` — место вернётся.

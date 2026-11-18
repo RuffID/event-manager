@@ -29,6 +29,13 @@ namespace EventManager.Api.Middlewares
                     BookingAccessDeniedException => StatusCodes.Status403Forbidden,
                     _ => StatusCodes.Status409Conflict
                 };
+                string title = statusCode switch
+                {
+                    StatusCodes.Status400BadRequest => "Event already started",
+                    StatusCodes.Status403Forbidden => "Forbidden",
+                    _ => "Booking conflict"
+                };
+
                 logger.LogWarning(
                     "Booking request refused with status {StatusCode}: {Method} {Path}",
                     statusCode,
@@ -43,7 +50,7 @@ namespace EventManager.Api.Middlewares
                 await WriteProblemDetailsAsync(
                     context,
                     statusCode,
-                    "Booking conflict",
+                    title,
                     exception.Message);
             }
             catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
