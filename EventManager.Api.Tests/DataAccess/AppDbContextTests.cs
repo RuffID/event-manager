@@ -25,12 +25,13 @@ namespace EventManager.Api.Tests.DataAccess
                 new DateTime(2030, 1, 1, 12, 0, 0, DateTimeKind.Utc),
                 5);
             Assert.True(originalEvent.TryReserveSeats());
-            Booking originalBooking = new Booking(originalEvent.Id);
+            Booking originalBooking = new Booking(originalEvent.Id, Guid.NewGuid());
 
             // Act
             await using (AppDbContext context = new AppDbContext(options))
             {
                 context.Events.Add(originalEvent);
+                context.Users.Add(new User(originalBooking.UserId, "test-user", "test-hash"));
                 context.Bookings.Add(originalBooking);
                 await context.SaveChangesAsync(cancellationToken);
             }
@@ -54,6 +55,7 @@ namespace EventManager.Api.Tests.DataAccess
                 Assert.Equal(4, loadedEvent.AvailableSeats);
                 Assert.Equal(originalBooking.Id, loadedBooking.Id);
                 Assert.Equal(originalEvent.Id, loadedBooking.EventId);
+                Assert.Equal(originalBooking.UserId, loadedBooking.UserId);
                 Assert.Equal(originalBooking.CreatedAt, loadedBooking.CreatedAt);
                 Assert.Equal(BookingStatus.Pending, loadedBooking.Status);
                 Assert.Null(loadedBooking.ProcessedAt);
@@ -99,7 +101,7 @@ namespace EventManager.Api.Tests.DataAccess
             IColumn statusColumn = Assert.IsAssignableFrom<IColumn>(bookingsTable.FindColumn("status"));
 
             string[] expectedEventColumns = ["available_seats", "description", "end_at", "id", "start_at", "title", "total_seats"];
-            string[] expectedBookingColumns = ["created_at", "event_id", "id", "processed_at", "status"];
+            string[] expectedBookingColumns = ["created_at", "event_id", "id", "processed_at", "status", "user_id"];
             Assert.Equal(expectedEventColumns, eventsTable.Columns.Select(column => column.Name).OrderBy(name => name, StringComparer.Ordinal));
             Assert.Equal(expectedBookingColumns, bookingsTable.Columns.Select(column => column.Name).OrderBy(name => name, StringComparer.Ordinal));
 
@@ -108,7 +110,12 @@ namespace EventManager.Api.Tests.DataAccess
             Assert.Equal(200, context.Model.FindEntityType(typeof(Event))!.FindProperty(nameof(Event.Title))!.GetMaxLength());
             Assert.Equal(2000, context.Model.FindEntityType(typeof(Event))!.FindProperty(nameof(Event.Description))!.GetMaxLength());
             Assert.False(statusColumn.IsNullable);
-            Assert.Same(eventsTable, Assert.Single(bookingsTable.ForeignKeyConstraints).PrincipalTable);
+            ITable usersTable = Assert.IsAssignableFrom<ITable>(model.FindTable("users", null));
+            Assert.Equal(2, bookingsTable.ForeignKeyConstraints.Count());
+            Assert.Contains(bookingsTable.ForeignKeyConstraints, key => key.PrincipalTable == eventsTable);
+            Assert.Contains(bookingsTable.ForeignKeyConstraints, key => key.PrincipalTable == usersTable);
+            Assert.False(Assert.IsAssignableFrom<IColumn>(bookingsTable.FindColumn("user_id")).IsNullable);
+            Assert.Contains(usersTable.Indexes, index => index.IsUnique && index.Columns.Single().Name == "login");
         }
     }
 }

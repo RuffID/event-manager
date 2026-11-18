@@ -22,6 +22,7 @@ namespace EventManager.Api.Tests.DataAccess
         [InlineData(typeof(AppDbContext))]
         [InlineData(typeof(IEventRepository))]
         [InlineData(typeof(IBookingRepository))]
+        [InlineData(typeof(IUserRepository))]
         [InlineData(typeof(IUnitOfWork))]
         public void AddRepositories_SharesDependencyOnlyWithinScope(Type serviceType)
         {
@@ -58,8 +59,8 @@ namespace EventManager.Api.Tests.DataAccess
             using ServiceTestContext database = new ServiceTestContext();
             CancellationToken token = TestContext.Current.CancellationToken;
             Event @event = CreateEvent();
-            Booking pending = new Booking(@event.Id);
-            Booking confirmed = new Booking(@event.Id);
+            Booking pending = new Booking(@event.Id, Guid.NewGuid());
+            Booking confirmed = new Booking(@event.Id, Guid.NewGuid());
             confirmed.Confirm();
             await database.SeedAsync(@event);
             database.Context.Bookings.AddRange(pending, confirmed);
@@ -97,7 +98,7 @@ namespace EventManager.Api.Tests.DataAccess
             IBookingRepository bookings = scope.ServiceProvider.GetRequiredService<IBookingRepository>();
             IUnitOfWork unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
             Event @event = CreateEvent();
-            Booking booking = new Booking(@event.Id);
+            Booking booking = new Booking(@event.Id, Guid.NewGuid());
 
             // Act
             events.Add(@event);
@@ -123,7 +124,7 @@ namespace EventManager.Api.Tests.DataAccess
             using ServiceTestContext database = new ServiceTestContext();
             CancellationToken token = TestContext.Current.CancellationToken;
             Event @event = CreateEvent();
-            Booking booking = new Booking(@event.Id);
+            Booking booking = new Booking(@event.Id, Guid.NewGuid());
             await database.SeedAsync(@event);
             database.Context.Bookings.Add(booking);
             await database.Context.SaveChangesAsync(token);
@@ -158,7 +159,7 @@ namespace EventManager.Api.Tests.DataAccess
             CancellationToken token = TestContext.Current.CancellationToken;
 
             // Act
-            ServiceResult<BookingInfo> result = await database.BookingService.CreateBookingAsync(@event.Id, token);
+            ServiceResult<BookingInfo> result = await database.BookingService.CreateBookingAsync(@event.Id, Guid.NewGuid(), token);
 
             // Assert
             Assert.True(result.Success);
@@ -176,7 +177,7 @@ namespace EventManager.Api.Tests.DataAccess
             using ServiceTestContext database = new ServiceTestContext(new FailingProcessingDelay(), interceptor);
             Event @event = CreateEvent();
             await database.SeedAsync(@event);
-            await database.BookingService.CreateBookingAsync(@event.Id, TestContext.Current.CancellationToken);
+            await database.BookingService.CreateBookingAsync(@event.Id, Guid.NewGuid(), TestContext.Current.CancellationToken);
             interceptor.Reset();
 
             // Act

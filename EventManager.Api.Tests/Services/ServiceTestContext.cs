@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Configuration;
 
 namespace EventManager.Api.Tests.Services
 {
@@ -29,6 +30,15 @@ namespace EventManager.Api.Tests.Services
                 }
             });
             services.AddLogging();
+            services.AddSecurityComponents(new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Jwt:Issuer"] = "test-issuer",
+                    ["Jwt:Audience"] = "test-audience",
+                    ["Jwt:SigningKeyBase64"] = Convert.ToBase64String(new byte[32]),
+                    ["Jwt:LifetimeMinutes"] = "15"
+                })
+                .Build());
             services.AddRepositories();
             services.AddApplication();
             services.AddBookingProcessingHosting();

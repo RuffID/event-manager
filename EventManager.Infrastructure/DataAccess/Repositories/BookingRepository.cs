@@ -17,9 +17,21 @@ namespace EventManager.Infrastructure.DataAccess.Repositories
         }
 
         /// <inheritdoc />
-        public Task<Booking?> GetByIdForUpdateAsync(Guid id, CancellationToken cancellationToken)
+        public async Task<Booking?> GetByIdForUpdateAsync(Guid id, CancellationToken cancellationToken)
         {
-            return context.Bookings.SingleOrDefaultAsync(entity => entity.Id == id, cancellationToken);
+            Booking? booking = await context.Bookings.SingleOrDefaultAsync(entity => entity.Id == id, cancellationToken);
+            if (booking is null)
+            {
+                return null;
+            }
+
+            await context.Entry(booking).ReloadAsync(cancellationToken);
+            if (context.Entry(booking).State == EntityState.Detached)
+            {
+                return null;
+            }
+
+            return booking;
         }
 
         /// <inheritdoc />
@@ -31,6 +43,15 @@ namespace EventManager.Infrastructure.DataAccess.Repositories
                 .ToListAsync(cancellationToken);
 
             return ids;
+        }
+
+        /// <inheritdoc />
+        public Task<int> CountActiveByUserAsync(Guid userId, CancellationToken cancellationToken)
+        {
+            return context.Bookings.CountAsync(booking =>
+                booking.UserId == userId &&
+                (booking.Status == BookingStatus.Pending || booking.Status == BookingStatus.Confirmed),
+                cancellationToken);
         }
 
         /// <inheritdoc />

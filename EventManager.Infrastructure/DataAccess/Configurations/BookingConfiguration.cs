@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace EventManager.Infrastructure.DataAccess.Configurations
 {
-    /// <summary>Настраивает хранение бронирований и связь с событием.</summary>
+    /// <summary>Настраивает хранение бронирований и связи с событием и пользователем.</summary>
     public class BookingConfiguration : IEntityTypeConfiguration<Booking>
     {
         /// <summary>Описывает таблицу, свойства и навигации бронирования.</summary>
@@ -16,6 +16,10 @@ namespace EventManager.Infrastructure.DataAccess.Configurations
             builder.Property(entity => entity.Id).HasColumnName("id").ValueGeneratedNever();
 
             builder.Property(entity => entity.EventId).HasColumnName("event_id").IsRequired();
+
+            builder.Property(entity => entity.UserId).HasColumnName("user_id").IsRequired();
+            builder.HasIndex(entity => entity.UserId);
+
             builder.Property(entity => entity.Status)
                 .HasColumnName("status")
                 .HasField("_status")
@@ -33,6 +37,12 @@ namespace EventManager.Infrastructure.DataAccess.Configurations
             builder.HasOne(entity => entity.Event)
                 .WithMany(entity => entity.Bookings)
                 .HasForeignKey(entity => entity.EventId)
+                .IsRequired();
+
+            builder.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(entity => entity.UserId)
+                .OnDelete(DeleteBehavior.Restrict)
                 .IsRequired();
         }
     }

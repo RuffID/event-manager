@@ -20,8 +20,9 @@ public class ConstraintTests(PostgresFixture database)
         Event other = TestData.CreateEvent("Existing event");
         await TestData.SeedAsync(database, [other]);
         Guid missingId = Guid.NewGuid();
-        Booking invalid = new Booking(missingId);
+        Booking invalid = new Booking(missingId, Guid.NewGuid());
         await using AppDbContext write = database.CreateContext();
+        write.Users.Add(TestData.CreateUser(invalid.UserId));
 
         Assert.False(await write.Events.AnyAsync(item => item.Id == missingId, CancellationToken.None));
 
@@ -46,9 +47,10 @@ public class ConstraintTests(PostgresFixture database)
         // Arrange
         await database.ResetAsync();
         Event parent = TestData.CreateEvent();
-        Booking valid = new Booking(parent.Id);
-        Booking invalid = new Booking(Guid.NewGuid());
+        Booking valid = new Booking(parent.Id, Guid.NewGuid());
+        Booking invalid = new Booking(Guid.NewGuid(), Guid.NewGuid());
         await using AppDbContext write = database.CreateContext();
+        write.Users.AddRange(TestData.CreateUser(valid.UserId), TestData.CreateUser(invalid.UserId));
 
         Assert.False(await write.Events.AnyAsync(item => item.Id == invalid.EventId, CancellationToken.None));
 
@@ -100,9 +102,9 @@ public class ConstraintTests(PostgresFixture database)
         // Arrange
         await database.ResetAsync();
         Event parent = TestData.CreateEvent();
-        Booking existing = new Booking(parent.Id);
+        Booking existing = new Booking(parent.Id, Guid.NewGuid());
         await TestData.SeedAsync(database, [parent], existing);
-        Booking duplicate = new Booking(parent.Id);
+        Booking duplicate = new Booking(parent.Id, existing.UserId);
         await using AppDbContext write = database.CreateContext();
 
         write.Entry(duplicate).Property(item => item.Id).CurrentValue = existing.Id;
@@ -234,6 +236,7 @@ public class ConstraintTests(PostgresFixture database)
     [Theory]
     [InlineData("id")]
     [InlineData("event_id")]
+    [InlineData("user_id")]
     [InlineData("status")]
     [InlineData("created_at")]
     public async Task Bookings_RejectNullInEveryRequiredColumn(string column)
@@ -244,6 +247,8 @@ public class ConstraintTests(PostgresFixture database)
         await TestData.SeedAsync(database, [parent]);
         Guid? id = Guid.NewGuid();
         Guid? eventId = parent.Id;
+        User owner = TestData.CreateUser();
+        Guid? userId = owner.Id;
         string? status = nameof(BookingStatus.Pending);
         DateTime? createdAt = DateTime.UtcNow;
         if (column == "id")
@@ -253,6 +258,10 @@ public class ConstraintTests(PostgresFixture database)
         else if (column == "event_id")
         {
             eventId = null;
+        }
+        else if (column == "user_id")
+        {
+            userId = null;
         }
         else if (column == "status")
         {
@@ -272,8 +281,8 @@ public class ConstraintTests(PostgresFixture database)
         // Act
         PostgresException exception = await Assert.ThrowsAsync<PostgresException>(() => write.Database.ExecuteSqlAsync(
             $"""
-            INSERT INTO bookings (id, event_id, status, created_at)
-            VALUES ({id}, {eventId}, {status}, {createdAt})
+            INSERT INTO bookings (id, event_id, user_id, status, created_at)
+            VALUES ({id}, {eventId}, {userId}, {status}, {createdAt})
             """, CancellationToken.None));
 
         // Assert
@@ -301,8 +310,8 @@ public class ConstraintTests(PostgresFixture database)
         // Act
         PostgresException exception = await Assert.ThrowsAsync<PostgresException>(() => write.Database.ExecuteSqlAsync(
             $"""
-            INSERT INTO bookings (id, event_id, status, created_at)
-            VALUES ({id}, {parent.Id}, {status}, {createdAt})
+            INSERT INTO bookings (id, event_id, user_id, status, created_at)
+            VALUES ({id}, {parent.Id}, {Guid.NewGuid()}, {status}, {createdAt})
             """, CancellationToken.None));
 
         // Assert

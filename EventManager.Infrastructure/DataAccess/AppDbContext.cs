@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EventManager.Infrastructure.DataAccess
 {
-    /// <summary>Предоставляет доступ к событиям и бронированиям в базе данных.</summary>
+    /// <summary>Предоставляет доступ к событиям, бронированиям и пользователям в базе данных.</summary>
     public class AppDbContext : DbContext
     {
         /// <summary>Создаёт контекст с указанными параметрами подключения.</summary>
@@ -17,6 +17,9 @@ namespace EventManager.Infrastructure.DataAccess
 
         /// <summary>Получает набор бронирований.</summary>
         public DbSet<Booking> Bookings => Set<Booking>();
+
+        /// <summary>Получает набор пользователей.</summary>
+        public DbSet<User> Users => Set<User>();
 
         /// <summary>Подключает конфигурации сущностей из сборки Infrastructure.</summary>
         /// <param name="modelBuilder">Построитель модели базы данных.</param>

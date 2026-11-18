@@ -10,6 +10,38 @@ namespace EventManager.Api.Tests.Middlewares
 {
     public class GlobalExceptionMiddlewareTests
     {
+        [Theory]
+        [InlineData("started", StatusCodes.Status400BadRequest, "Event already started")]
+        [InlineData("limit", StatusCodes.Status409Conflict, "Booking conflict")]
+        [InlineData("access", StatusCodes.Status403Forbidden, "Forbidden")]
+        public async Task InvokeAsync_MapsNewBookingRulesToExpectedStatus(string rule, int expectedStatus, string expectedTitle)
+        {
+            // Arrange
+            Exception failure = rule switch
+            {
+                "started" => new EventAlreadyStartedException(),
+                "limit" => new ActiveBookingLimitExceededException(10),
+                "access" => new BookingAccessDeniedException(),
+                _ => throw new ArgumentOutOfRangeException(nameof(rule))
+            };
+            DefaultHttpContext context = new DefaultHttpContext();
+            using MemoryStream body = new MemoryStream();
+            context.Response.Body = body;
+            GlobalExceptionMiddleware middleware = new GlobalExceptionMiddleware(
+                _ => throw failure, NullLogger<GlobalExceptionMiddleware>.Instance);
+
+            // Act
+            await middleware.InvokeAsync(context);
+
+            // Assert
+            Assert.Equal(expectedStatus, context.Response.StatusCode);
+            body.Position = 0;
+            using JsonDocument json = await JsonDocument.ParseAsync(body, cancellationToken: TestContext.Current.CancellationToken);
+            Assert.Equal(expectedStatus, json.RootElement.GetProperty("status").GetInt32());
+            Assert.Equal(expectedTitle, json.RootElement.GetProperty("title").GetString());
+            Assert.Equal(failure.Message, json.RootElement.GetProperty("detail").GetString());
+        }
+
         [Fact]
         public async Task InvokeAsync_PropagatesCancellation_WhenRequestIsAborted()
         {

@@ -12,6 +12,12 @@ namespace EventManager.Application.Models.Results
         NotFound,
 
         /// <summary>Операцию не удалось выполнить из-за внутренней ошибки.</summary>
-        Internal
+        Internal,
+
+        /// <summary>Учётные данные не подтверждены.</summary>
+        Unauthorized,
+
+        /// <summary>Операция конфликтует с текущим состоянием данных.</summary>
+        Conflict
     }
 }

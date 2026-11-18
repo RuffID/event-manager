@@ -18,21 +18,39 @@ namespace EventManager.Api.Middlewares
             {
                 await next(context);
             }
-            catch (NoAvailableSeatsException exception)
+            catch (Exception exception) when (exception is NoAvailableSeatsException
+                or EventAlreadyStartedException
+                or ActiveBookingLimitExceededException
+                or BookingAccessDeniedException)
             {
+                int statusCode = exception switch
+                {
+                    EventAlreadyStartedException => StatusCodes.Status400BadRequest,
+                    BookingAccessDeniedException => StatusCodes.Status403Forbidden,
+                    _ => StatusCodes.Status409Conflict
+                };
+                string title = statusCode switch
+                {
+                    StatusCodes.Status400BadRequest => "Event already started",
+                    StatusCodes.Status403Forbidden => "Forbidden",
+                    _ => "Booking conflict"
+                };
+
                 logger.LogWarning(
-                    exception,
-                    "Конфликт бронирования {Method} {Path}",
+                    "Booking request refused with status {StatusCode}: {Method} {Path}",
+                    statusCode,
                     context.Request.Method,
                     context.Request.Path);
 
                 if (context.Response.HasStarted)
+                {
                     throw;
+                }
 
                 await WriteProblemDetailsAsync(
                     context,
-                    StatusCodes.Status409Conflict,
-                    "Booking conflict",
+                    statusCode,
+                    title,
                     exception.Message);
             }
             catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)

@@ -26,7 +26,7 @@ public class MigrationTests(PostgresFixture database)
         await database.DeleteDatabaseAsync();
         Event parent = TestData.CreateEvent("Старое событие");
         Assert.True(parent.TryReserveSeats());
-        Booking booking = new Booking(parent.Id);
+        Booking booking = new Booking(parent.Id, Guid.NewGuid());
         if (confirmed)
         {
             booking.Confirm();
@@ -39,7 +39,7 @@ public class MigrationTests(PostgresFixture database)
         await using AppDbContext migrate = database.CreateContext();
 
         IMigrator migrator = migrate.GetService<IMigrator>();
-        Assert.Equal(new[] { INITIAL_MIGRATION, RENAME_MIGRATION }, migrate.Database.GetMigrations());
+        Assert.Equal(new[] { INITIAL_MIGRATION, RENAME_MIGRATION }, migrate.Database.GetMigrations().Take(2));
         await migrator.MigrateAsync(INITIAL_MIGRATION, token);
         Assert.Equal(new[] { INITIAL_MIGRATION }, await migrate.Database.GetAppliedMigrationsAsync(token));
 
@@ -65,17 +65,31 @@ public class MigrationTests(PostgresFixture database)
         await using AppDbContext verify = database.CreateContext();
 
         Assert.Equal(new[] { INITIAL_MIGRATION, RENAME_MIGRATION }, await verify.Database.GetAppliedMigrationsAsync(token));
-        Assert.Empty(await verify.Database.GetPendingMigrationsAsync(token));
-        Event savedEvent = await verify.Events.AsNoTracking().Include(item => item.Bookings).SingleAsync(token);
-        Booking savedBooking = Assert.Single(savedEvent.Bookings);
+        Assert.EndsWith("_AddUsersAndBookingOwnership", Assert.Single(await verify.Database.GetPendingMigrationsAsync(token)));
+        Event savedEvent = await verify.Events.AsNoTracking().SingleAsync(token);
+        var savedBooking = await verify.Bookings.AsNoTracking()
+            .Select(item => new { item.Id, item.EventId, item.Status, item.CreatedAt, item.ProcessedAt })
+            .SingleAsync(token);
         TestData.AssertEvent(parent, savedEvent);
-        TestData.AssertBooking(booking, savedBooking);
-        Assert.Same(savedEvent, savedBooking.Event);
+        Assert.Equal(booking.Id, savedBooking.Id);
+        Assert.Equal(booking.EventId, savedBooking.EventId);
+        Assert.Equal(booking.Status, savedBooking.Status);
+        Assert.InRange(savedBooking.CreatedAt, booking.CreatedAt.AddMilliseconds(-1), booking.CreatedAt.AddMilliseconds(1));
+        if (booking.ProcessedAt.HasValue)
+        {
+            Assert.NotNull(savedBooking.ProcessedAt);
+            Assert.InRange(savedBooking.ProcessedAt.Value, booking.ProcessedAt.Value.AddMilliseconds(-1), booking.ProcessedAt.Value.AddMilliseconds(1));
+        }
+        else
+        {
+            Assert.Null(savedBooking.ProcessedAt);
+        }
     }
 
     [Theory]
     [InlineData("events", "id,title,description,start_at,end_at,total_seats,available_seats")]
-    [InlineData("bookings", "id,event_id,status,created_at,processed_at")]
+    [InlineData("bookings", "id,event_id,status,created_at,processed_at,user_id")]
+    [InlineData("users", "id,login,password_hash,role")]
     public async Task MigrateAsync_CreatesExactPhysicalSnakeCaseColumns(string table, string expectedColumns)
     {
         // Arrange
@@ -119,7 +133,7 @@ public class MigrationTests(PostgresFixture database)
         string[] expected = migrate.Database.GetMigrations().ToArray();
         Assert.NotEmpty(expected);
         Event parent = TestData.CreateEvent("Migration schema");
-        Booking booking = new Booking(parent.Id);
+        Booking booking = new Booking(parent.Id, Guid.NewGuid());
 
         // Act
         await migrate.Database.MigrateAsync(CancellationToken.None);
@@ -130,6 +144,7 @@ public class MigrationTests(PostgresFixture database)
         await using (AppDbContext write = database.CreateContext())
         {
             new EventRepository(write).Add(parent);
+            new UserRepository(write).Add(TestData.CreateUser(booking.UserId));
             new BookingRepository(write).Add(booking);
             await new EfUnitOfWork(write).SaveChangesAsync(CancellationToken.None);
         }
@@ -151,7 +166,7 @@ public class MigrationTests(PostgresFixture database)
         await database.ResetAsync();
         Event parent = TestData.CreateEvent("Existing data");
         Assert.True(parent.TryReserveSeats());
-        Booking booking = new Booking(parent.Id);
+        Booking booking = new Booking(parent.Id, Guid.NewGuid());
         booking.Confirm();
         await TestData.SeedAsync(database, [parent], booking);
         await using AppDbContext migrate = database.CreateContext();

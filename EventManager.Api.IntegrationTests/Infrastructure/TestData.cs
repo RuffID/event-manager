@@ -6,6 +6,13 @@ namespace EventManager.Api.IntegrationTests.Infrastructure;
 
 public static class TestData
 {
+    public static User CreateUser(Guid? id = null)
+    {
+        Guid userId = id ?? Guid.NewGuid();
+
+        return new User(userId, $"user-{userId:N}", "test-hash");
+    }
+
     public static Event CreateEvent(string title = "Test event", DateTime? startAt = null,
         DateTime? endAt = null, string? description = "Description", int seats = 10)
     {
@@ -29,6 +36,7 @@ public static class TestData
         await using AppDbContext context = database.CreateContext();
 
         context.Events.AddRange(events);
+        context.Users.AddRange(bookings.Select(booking => booking.UserId).Distinct().Select(id => CreateUser(id)));
         context.Bookings.AddRange(bookings);
         await new EfUnitOfWork(context).SaveChangesAsync(CancellationToken.None);
     }
@@ -48,6 +56,7 @@ public static class TestData
     {
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.EventId, actual.EventId);
+        Assert.Equal(expected.UserId, actual.UserId);
         Assert.Equal(expected.Status, actual.Status);
         AssertTime(expected.CreatedAt, actual.CreatedAt);
         if (expected.ProcessedAt.HasValue)

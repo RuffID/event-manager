@@ -19,6 +19,7 @@ builder.Services.AddPresentation();
 // Внедрение зависимостей для сервисов
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
+builder.Services.AddJwtAuthentication();
 builder.Services.AddBookingProcessingHosting();
 
 var app = builder.Build();
@@ -29,6 +30,9 @@ app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseSwagger();
 app.UseSwaggerUI();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 

@@ -17,6 +17,9 @@ namespace EventManager.Domain.Entities
         /// <summary>Получает идентификатор забронированного события.</summary>
         public Guid EventId { get; private set; }
 
+        /// <summary>Получает идентификатор пользователя, которому принадлежит бронь.</summary>
+        public Guid UserId { get; private set; }
+
         /// <summary>Получает событие бронирования после загрузки навигационного свойства.</summary>
         public Event Event { get; private set; } = null!;
 
@@ -52,19 +55,40 @@ namespace EventManager.Domain.Entities
         {
         }
 
-        /// <summary>
-        /// Создаёт бронь в статусе ожидания обработки.
-        /// </summary>
+        /// <summary>Создаёт бронь указанного пользователя в статусе ожидания обработки.</summary>
         /// <param name="eventId">Идентификатор события.</param>
-        public Booking(Guid eventId)
+        /// <param name="userId">Идентификатор пользователя.</param>
+        public Booking(Guid eventId, Guid userId)
         {
             if (eventId == Guid.Empty)
+            {
                 throw new ArgumentException("Event identifier must not be empty.", nameof(eventId));
+            }
+
+            if (userId == Guid.Empty)
+            {
+                throw new ArgumentException("User identifier must not be empty.", nameof(userId));
+            }
 
             Id = Guid.NewGuid();
             EventId = eventId;
+            UserId = userId;
             _status = BookingStatus.Pending;
             CreatedAt = DateTime.UtcNow;
+        }
+
+        /// <summary>Отменяет бронь, сохраняя время её предыдущей обработки.</summary>
+        public void Cancel()
+        {
+            lock (_stateLock)
+            {
+                if (_status == BookingStatus.Cancelled)
+                {
+                    throw new InvalidOperationException("The booking has already been cancelled.");
+                }
+
+                _status = BookingStatus.Cancelled;
+            }
         }
 
         /// <summary>Подтверждает бронь и фиксирует время обработки.</summary>

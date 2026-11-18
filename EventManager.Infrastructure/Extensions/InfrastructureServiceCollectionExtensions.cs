@@ -7,10 +7,10 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace EventManager.Infrastructure.Extensions
 {
-    /// <summary>Подключает хранение данных и реализации прикладных портов.</summary>
+    /// <summary>Подключает хранение данных, безопасность и реализации прикладных портов.</summary>
     public static class InfrastructureServiceCollectionExtensions
     {
-        /// <summary>Регистрирует PostgreSQL и общую scoped-единицу работы.</summary>
+        /// <summary>Регистрирует PostgreSQL, общую scoped-единицу работы и компоненты безопасности.</summary>
         /// <param name="services">Коллекция сервисов приложения.</param>
         /// <param name="configuration">Внешняя конфигурация подключения.</param>
         /// <returns>Коллекция сервисов с инфраструктурными регистрациями.</returns>
@@ -25,6 +25,7 @@ namespace EventManager.Infrastructure.Extensions
             }
 
             services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
+            services.AddSecurityComponents(configuration);
 
             return services.AddRepositories();
         }
@@ -36,6 +37,7 @@ namespace EventManager.Infrastructure.Extensions
         {
             services.AddScoped<IEventRepository, EventRepository>();
             services.AddScoped<IBookingRepository, BookingRepository>();
+            services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 
             return services;
